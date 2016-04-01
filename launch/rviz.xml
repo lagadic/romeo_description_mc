@@ -1,0 +1,10 @@
+<launch>
+	<!-- optirun arguments -->
+	<arg name="optirun" />
+	<arg name="config_file" />
+
+	<arg name="optirun_prefix" value="" unless="$(arg optirun)" />
+	<arg name="optirun_prefix" value="optirun" if="$(arg optirun)" />
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg config_file).rviz" launch-prefix="$(arg optirun_prefix)" />
+</launch>
