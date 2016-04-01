@@ -1,6 +1,6 @@
 import rospy
 from rospy.numpy_msg import numpy_msg
-from comanoid_rennes.msg import NumpyFloat64
+from romeo_mc.msg import NumpyFloat64
 
 from eigen3 import toNumpy
 

@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     # load the object urdf
     rospack = rospkg.RosPack()
-    base_path = rospack.get_path('comanoid_rennes')
+    base_path = rospack.get_path('romeo_mc')
     urdf_name = sys.argv[7]
     with open (base_path+'/urdf/'+urdf_name, 'r') as myfile:
       object_urdf=myfile.read()

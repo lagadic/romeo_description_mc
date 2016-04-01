@@ -30,7 +30,7 @@
 
     <node name="mr_qp_state_publisher" pkg="mc_visualization" type="mr_qp_state_publisher.py" />
     <rosparam param="source_list">[[0,'/robot/controls/joint_states']]</rosparam>
-    <node name="test_visservo_grasp" pkg="comanoid_rennes" type="test_visservo_grasp_romeo.py" args="$(arg test_mode)" output="screen">
+    <node name="test_visservo_grasp" pkg="romeo_mc" type="test_visservo_grasp_romeo.py" args="$(arg test_mode)" output="screen">
       <remap from="qp_joint_states" to="/robot/controls/joint_states" />
     </node>
     <node name="mr_contact_force_publisher" pkg="mc_visualization" type="mr_contact_force_visualization.py"/>
@@ -48,22 +48,22 @@
   <!-- GUIs-->
   <node name="ask_user_gui" pkg="mc_control" type="ask_user_gui.py" />
 
-  <include file="$(find comanoid_rennes)/launch/rviz.xml">
+  <include file="$(find romeo_mc)/launch/rviz.xml">
           <arg name="optirun" value="$(arg optirun)" />
-          <arg name="config_file" value="$(find comanoid_rennes)/rviz_config/test_visservo_grasp_romeo" />
+          <arg name="config_file" value="$(find romeo_mc)/rviz_config/test_visservo_grasp_romeo" />
   </include>
 
   <!-- object-->
   <group ns="object" if="$(arg interactive_mode)">
     <param name="tf_prefix" value="object"/>
-    <node name="movable_object" pkg="comanoid_rennes" type="movable_object.py" args="0.3 -0.2 1.0 0. 0. 0. small_box.urdf 200"/>
+    <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.3 -0.2 1.0 0. 0. 0. small_box.urdf 200"/>
   </group>
   <group ns="object" unless="$(arg interactive_mode)">
     <param name="tf_prefix" value="object"/>
-    <node name="moving_object" pkg="comanoid_rennes" type="moving_object.py" args="0.3 -0.25 1.0 0. 0. 0. small_box.urdf 200 wave"/>
+    <node name="moving_object" pkg="romeo_mc" type="moving_object.py" args="0.3 -0.25 1.0 0. 0. 0. small_box.urdf 200 wave"/>
   </group>
 
   <!-- fake camera-->
-  <node name="fake_camera" pkg="comanoid_rennes" type="fake_camera.py" />
+  <node name="fake_camera" pkg="romeo_mc" type="fake_camera.py" />
 
 </launch>
