@@ -82,6 +82,7 @@ if __name__ == '__main__':
     for rab in map(lambda x: x.format(prefL='r', prefU='R'), armsBodies):
       cols.append(Collision(lab, rab, 0.10, 0.05, 0.))
 
+
   cols += [Collision('l_wrist', 'torso', 0.05, 0.01, 0.), #TODO create mesh with l_wrist and fingers
            Collision('l_wrist', 'body', 0.05, 0.01, 0.),
            Collision('l_wrist', 'NeckPitch_link', 0.05, 0.01, 0.),
@@ -96,8 +97,12 @@ if __name__ == '__main__':
            Collision('r_wrist', 'RTibia', 0.05, 0.01, 0.),
            Collision('LElbow', 'torso', 0.05, 0.01, 0.), 
            Collision('LElbow', 'body', 0.05, 0.01, 0.),
+           Collision('LElbow', 'NeckPitch_link', 0.05, 0.01, 0.), 
+           Collision('LElbow', 'HeadRoll_link', 0.05, 0.01, 0.),
            Collision('RElbow', 'torso', 0.05, 0.01, 0.), 
            Collision('RElbow', 'body', 0.05, 0.01, 0.),
+           Collision('RElbow', 'NeckPitch_link', 0.05, 0.01, 0.), 
+           Collision('RElbow', 'HeadRoll_link', 0.05, 0.01, 0.),
            Collision('RThigh', 'LThigh', 0.01, 0.001, 0.),
            Collision('RTibia', 'LTibia', 0.05, 0.01, 0.),
            Collision('r_ankle', 'l_ankle', 0.05, 0.01, 0.),

@@ -1,1 +1,3 @@
-# romeo_description_mc
+# romeo_mc
+
+Collection of tests: Romeo and multi-contact.
