@@ -9,7 +9,7 @@ class fakeCamera(object):
     self.image_Pub = rospy.Publisher('/fake_cam/image', Image, queue_size=10)
     self.h = 480
     self.w = 640
-    self.frame = '0/gaze_corrected'
+    self.frame = '0/CameraLeftEye_optical_frame'
 
     # camera params copied from xtion
     self.cam_info_msg = CameraInfo()
