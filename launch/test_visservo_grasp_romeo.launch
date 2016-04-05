@@ -10,15 +10,15 @@
   <!-- usage mode of the test -->
   <arg name="test_mode" default="normal" />
 
-  <param name="r1_description" command="cat $(find romeo_description)/urdf/romeo.urdf" />
+  <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
   <param name="r2_description" command="cat $(find mc_env_description)/urdf/ground.urdf" />
-  <param name="robot/robot_description" command="cat $(find romeo_description)/urdf/romeo.urdf" />
-  <param name="r3_description" command="cat $(find romeo_description)/urdf/romeo.urdf" />
+  <param name="robot/robot_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
+  <param name="r3_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
 
 
-  <rosparam param="/robots/description" subst_value="True">['$(find romeo_description)/urdf/romeo.urdf','$(find mc_env_description)/urdf/ground.urdf','$(find romeo_description)/urdf/romeo.urdf']</rosparam>
+  <rosparam param="/robots/description" subst_value="True">['$(find romeo_description_mc)/urdf/romeo.urdf','$(find mc_env_description)/urdf/ground.urdf','$(find romeo_description_mc)/urdf/romeo.urdf']</rosparam>
   <rosparam param="/robots/modules">['romeo', 'ground', 'romeo']</rosparam>
-  <rosparam param="/robots/rsdf_dirs" subst_value="True">['$(find romeo_description)/rsdf','$(find mc_env_description)/rsdf/ground','$(find romeo_description)/rsdf']</rosparam>
+  <rosparam param="/robots/rsdf_dirs" subst_value="True">['$(find romeo_description_mc)/rsdf','$(find mc_env_description)/rsdf/ground','$(find romeo_description_mc)/rsdf']</rosparam>
 
   <rosparam param="/robots/bases">[[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]</rosparam>
   <param name="stabilizer" value="true" />

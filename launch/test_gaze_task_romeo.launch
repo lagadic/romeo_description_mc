@@ -7,13 +7,13 @@
   <!-- object behavior argument (interactive or pre-programmed) -->
   <arg name="interactive_mode" default="true" />
 
-  <param name="r1_description" command="cat $(find romeo_description)/urdf/romeo.urdf" />
+  <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
   <param name="r2_description" command="cat $(find mc_env_description)/urdf/ground.urdf" />
-  <param name="robot/robot_description" command="cat $(find romeo_description)/urdf/romeo.urdf" />
+  <param name="robot/robot_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
 
-  <rosparam param="/robots/description" subst_value="True">['$(find romeo_description)/urdf/romeo.urdf','$(find mc_env_description)/urdf/ground.urdf']</rosparam>
+  <rosparam param="/robots/description" subst_value="True">['$(find romeo_description_mc)/urdf/romeo.urdf','$(find mc_env_description)/urdf/ground.urdf']</rosparam>
   <rosparam param="/robots/modules">['romeo', 'ground']</rosparam>
-  <rosparam param="/robots/rsdf_dirs" subst_value="True">['$(find romeo_description)/rsdf','$(find mc_env_description)/rsdf/ground']</rosparam>
+  <rosparam param="/robots/rsdf_dirs" subst_value="True">['$(find romeo_description_mc)/rsdf','$(find mc_env_description)/rsdf/ground']</rosparam>
 
   <rosparam param="/robots/bases">[[0,0,0,0,0,0],[0,0,0,0,0,0]]</rosparam>
   <param name="stabilizer" value="true" />
