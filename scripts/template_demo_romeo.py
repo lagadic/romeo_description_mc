@@ -157,7 +157,14 @@ if __name__ == '__main__':
                                            5., 100.)
   torsoOriTask, torsoOriTaskSp = orientationTask(robots, romeo_index, 'torso',
                                                  Matrix3d.Identity(), 10., 10.)
-  comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
+  headOriTask, headOriTaskSp = orientationTask(robots, romeo_index, 'HeadRoll_link',
+                                                 Matrix3d.Identity(), 10., 10.)
+
+  # move the CoM to the center of the support, TODO: remove this if a better half-sitting is available
+  com_init = rbd.computeCoM(romeo.mb, romeo.mbc)
+  com_init[0] = 0.
+  com_init[1] = 0.
+  comTask, comTaskSp = comTask(robots, romeo_index, com_init,
                                5., 100000.)
 
   # add tasks to the solver
@@ -167,6 +174,7 @@ if __name__ == '__main__':
   qpsolver.solver.addTask(lhOriTaskSp)
 
   qpsolver.solver.addTask(torsoOriTaskSp)
+  qpsolver.solver.addTask(headOriTaskSp)
   qpsolver.solver.addTask(comTaskSp)
   qpsolver.solver.addTask(postureTask1)
 
