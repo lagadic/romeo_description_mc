@@ -73,7 +73,7 @@ if __name__ == '__main__':
                                            damper=(0.1, 0.01, 0.5), velocityPercent=0.5)
   kinConstraint1 = KinematicsConstraint(robots, romeo_index, timeStep,
                                         damper=(0.1, 0.01, 0.5), velocityPercent=0.5)
-  
+
   # Self-collision robot
   cols = []
   # Collision between arms
@@ -89,19 +89,19 @@ if __name__ == '__main__':
            Collision('l_wrist', 'HeadRoll_link', 0.05, 0.01, 0.),
            Collision('l_wrist', 'LThigh', 0.05, 0.01, 0.),
            Collision('l_wrist', 'LTibia', 0.05, 0.01, 0.),
-           Collision('r_wrist', 'torso', 0.05, 0.01, 0.), 
+           Collision('r_wrist', 'torso', 0.05, 0.01, 0.),
            Collision('r_wrist', 'body', 0.05, 0.01, 0.),
            Collision('r_wrist', 'NeckPitch_link', 0.05, 0.01, 0.),
            Collision('r_wrist', 'HeadRoll_link', 0.05, 0.01, 0.),
            Collision('r_wrist', 'RThigh', 0.05, 0.01, 0.),
            Collision('r_wrist', 'RTibia', 0.05, 0.01, 0.),
-           Collision('LElbow', 'torso', 0.05, 0.01, 0.), 
+           Collision('LElbow', 'torso', 0.05, 0.01, 0.),
            Collision('LElbow', 'body', 0.05, 0.01, 0.),
-           Collision('LElbow', 'NeckPitch_link', 0.05, 0.01, 0.), 
+           Collision('LElbow', 'NeckPitch_link', 0.05, 0.01, 0.),
            Collision('LElbow', 'HeadRoll_link', 0.05, 0.01, 0.),
-           Collision('RElbow', 'torso', 0.05, 0.01, 0.), 
+           Collision('RElbow', 'torso', 0.05, 0.01, 0.),
            Collision('RElbow', 'body', 0.05, 0.01, 0.),
-           Collision('RElbow', 'NeckPitch_link', 0.05, 0.01, 0.), 
+           Collision('RElbow', 'NeckPitch_link', 0.05, 0.01, 0.),
            Collision('RElbow', 'HeadRoll_link', 0.05, 0.01, 0.),
            Collision('RThigh', 'LThigh', 0.01, 0.001, 0.),
            Collision('RTibia', 'LTibia', 0.05, 0.01, 0.),
@@ -113,7 +113,7 @@ if __name__ == '__main__':
            Collision('r_ankle', 'LThigh', 0.05, 0.01, 0.),
            Collision('l_ankle', 'RThigh', 0.05, 0.01, 0.),
           ]
-  
+
   r1SelfCollisionConstraint = CollisionsConstraint(robots, romeo_index,
                                                    romeo_index, timeStep)
   r1SelfCollisionConstraint.addCollisions(robots, cols)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
   # Target goals
   rf_pos_goal = rFoot.X_0_s(romeo).translation()
   rf_ori_goal = rFoot.X_0_s(romeo).rotation()
-  rh_pos_goal = rHand.X_0_s(romeo).translation() # + Vector3d(0.4, -0.2, 0.3) 
+  rh_pos_goal = rHand.X_0_s(romeo).translation() # + Vector3d(0.4, -0.2, 0.3)
   lh_pos_goal = lHand.X_0_s(romeo).translation()  + Vector3d(0.1,  0.1, 0.0)
   lhand_rotation_goal = lHand.X_0_s(romeo).rotation() # sva.RotY(-np.pi/2.)
   rhand_rotation_goal = rHand.X_0_s(romeo).rotation()
