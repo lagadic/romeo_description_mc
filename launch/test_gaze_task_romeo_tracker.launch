@@ -1,0 +1,69 @@
+<launch>
+  <arg name="bag" default="false" />
+
+  <!-- optirun arguments -->
+  <arg name="optirun" default="false" />
+
+  <!-- object behavior argument (interactive or pre-programmed) -->
+  <arg name="interactive_mode" default="true" />
+
+  <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
+  <param name="r2_description" command="cat $(find mc_env_description)/urdf/ground.urdf" />
+  <param name="robot/robot_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
+
+  <rosparam param="/robots/description" subst_value="True">['$(find romeo_description_mc)/urdf/romeo.urdf','$(find mc_env_description)/urdf/ground.urdf']</rosparam>
+  <rosparam param="/robots/modules">['romeo', 'ground']</rosparam>
+  <rosparam param="/robots/rsdf_dirs" subst_value="True">['$(find romeo_description_mc)/rsdf','$(find mc_env_description)/rsdf/ground']</rosparam>
+
+  <rosparam param="/robots/bases">[[0,0,0,0,0,0],[0,0,0,0,0,0]]</rosparam>
+  <param name="stabilizer" value="true" />
+
+  <group ns="robot">
+    <node name="rs_state_publisher" pkg="mc_visualization" type="rs_state_publisher.py">
+      <param name="tf_prefix" value="robot_rs" />
+    </node>
+
+    <node name="mr_qp_state_publisher" pkg="mc_visualization" type="mr_qp_state_publisher.py" />
+    <rosparam param="source_list">[[0,'/robot/controls/joint_states']]</rosparam>
+    <node name="test_gaze_task_romeo" pkg="romeo_mc" type="test_gaze_task_romeo_tracker.py" output="screen">
+      <remap from="qp_joint_states" to="/robot/controls/joint_states" />
+    </node>
+    <node name="mr_contact_force_publisher" pkg="mc_visualization" type="mr_contact_force_visualization.py"/>
+
+    <!-- Use simulated ticker -->
+    <group unless="$(optenv ROBOT_CONTROL false)">
+      <node name="ticker" pkg="mc_control" type="mr_ticker.py">
+        <param name="publish_frequency" type="double" value="200" />
+      </node>
+    </group>
+
+  </group>
+
+  <!--group if="$(optenv romeo_NETWORK false)">
+    <include file="$(find mc_control_scenario)/robot/network/hrp.xml">
+      <arg name="robot" value="romeo" />
+      <arg name="hostname" value="$(env romeo_HOSTNAME)" />
+    </include>
+  </group> -->
+
+  <!-- GUIs-->
+  <node name="ask_user_gui" pkg="mc_control" type="ask_user_gui.py" />
+
+  <include file="$(find romeo_mc)/launch/rviz.xml">
+          <arg name="optirun" value="$(arg optirun)" />
+          <arg name="config_file" value="$(find romeo_mc)/rviz_config/test_gaze_task_romeo" />
+  </include>
+
+  <!-- object-->
+  <group ns="object" if="$(arg interactive_mode)">
+    <param name="tf_prefix" value="object"/>
+    <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="2.0 0.0 1.0 1.5708 0.0 0.0 small_box.urdf 200"/>
+  </group>
+  <group ns="object" unless="$(arg interactive_mode)">
+    <param name="tf_prefix" value="object"/>
+    <node name="moving_object" pkg="romeo_mc" type="moving_object.py" args="2.0 0.0 1.0 1.5708 0.0 0.0 small_box.urdf 200 two_target"/>
+  </group>
+
+  <!-- fake camera-->
+  <node name="fake_camera" pkg="romeo_mc" type="fake_camera.py" />
+</launch>
