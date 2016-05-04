@@ -51,7 +51,7 @@
 
   <include file="$(find romeo_mc)/launch/rviz.xml">
           <arg name="optirun" value="$(arg optirun)" />
-          <arg name="config_file" value="$(find romeo_mc)/rviz_config/test_gaze_task_romeo" />
+          <arg name="config_file" value="$(find romeo_mc)/rviz_config/test_gaze_task_romeo_tracker" />
   </include>
 
   <!-- object-->
