@@ -13,8 +13,8 @@
   <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
   <param name="r2_description" command="cat $(find mc_env_description)/urdf/ground.urdf" />
   <param name="robot/robot_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
-  <param name="r3_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
-
+<!--   <param name="r3_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
+ -->
 
   <rosparam param="/robots/description" subst_value="True">['$(find romeo_description_mc)/urdf/romeo.urdf','$(find mc_env_description)/urdf/ground.urdf','$(find romeo_description_mc)/urdf/romeo.urdf']</rosparam>
   <rosparam param="/robots/modules">['romeo', 'ground', 'romeo']</rosparam>
@@ -63,11 +63,13 @@
     <param name="tf_prefix" value="object"/>
 <!--     <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.24644 -0.22262 0.86438 1.57 0. 0. small_box.urdf 200"/> -->
  <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.20644 -0.22262 0.83438 1.57 0. 0. small_box.urdf 200"/>
-  </group>
+ 
+<!--   <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.159347 -0.28012 0.77398 1.4 0. 0. small_box.urdf 200"/> -->
+ </group>
 
   <group ns="object" unless="$(arg interactive_mode)">
     <param name="tf_prefix" value="object"/>
-    <node name="moving_object" pkg="romeo_mc" type="moving_object.py" args="0.3 -0.25 1.0 0. 0. 0. small_box.urdf 200 wave"/>
+    <node name="moving_object" pkg="romeo_mc" type="moving_object.py" args="0.3 -0.25 0.0 0. 0. 0. small_box.urdf 200 wave"/>
   </group>
 
   <!-- fake camera-->

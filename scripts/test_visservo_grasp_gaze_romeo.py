@@ -57,14 +57,14 @@ if __name__ == '__main__':
 
   romeo_index = 0
   env_index = 1
-  romeo_real_index = 2
+ # romeo_real_index = 2
 
   romeo = robots.robots[romeo_index]
   env = robots.robots[env_index]
-  romeo_real = robots.robots[romeo_real_index]
+ # romeo_real = robots.robots[romeo_real_index]
 
   # compute foot position to be in contact with the ground
-  for rob in [romeo, romeo_real]:
+  for rob in [romeo]:
     rbd.forwardKinematics(rob.mb, rob.mbc)
     tz = -rob.surfaces['Lfoot'].X_0_s(rob).translation().z()
     tx = -rob.surfaces['Lfoot'].X_0_s(rob).translation().x() #zero the feet surface
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     rbd.forwardVelocity(r.mb, r.mbc)
 
   romeoJsp = JointStatePublisher(romeo)
-  romeo_real_Jsp = JointStatePublisher(romeo_real)
+  #romeo_real_Jsp = JointStatePublisher(romeo_real)
 
   # create solver
   qpsolver = MRQPSolver(robots, timeStep)
@@ -227,7 +227,7 @@ if __name__ == '__main__':
       # initialize fake Vision
       self.X_gaze_hand = sva.PTransformd(Vector3d.Zero()) #TODO: better init
       self.X_gaze_object = sva.PTransformd(Vector3d.Zero()) #TODO: better init
-      self.hand_frame = '/'+str(romeo_real_index)+'/r_wrist'
+      self.hand_frame = '/'+str(romeo_index)+'/r_wrist'
       self.object_frame = '/object/base_link'
       if test_mode == 'posTask':
         self.tf_base_frame = '/map'
@@ -241,7 +241,7 @@ if __name__ == '__main__':
       self.status_tracker_hand = 0;
 
       # initialize joint names for adding uncertainty
-      self.joint_names = map(lambda x: x.name(), list(romeo_real.mb.joints()))
+      #self.joint_names = map(lambda x: x.name(), list(romeo.mb.joints()))
 
       # for plotting task error
       self.task_error_pub = TaskErrorPub(task_error_to_pub, 'rh_PBVS_task')
@@ -251,27 +251,6 @@ if __name__ == '__main__':
                             'init_gaze_task',
                             'visual_servo_grasp']
       self.checkSequence()
-
-    def fakeControl(self):
-      """
-      Copy the robot state / posture of the controlled internal model to the "real" one
-      """
-      romeo_real.mbc = copy.copy(romeo.mbc)
-
-    def addUncertainties(self):
-      """
-      Adds bias and noise to the relevant portions
-      TODO:
-        - more modular bias
-        - something more generic that can handle the free-flyer change properly
-        - noise
-      """
-      new_posture = rbdList(romeo_real.mbc.q)
-#      new_posture[self.joint_names.index('CHEST_P')] = [new_posture[self.joint_names.index('CHEST_P')][0] - 0.5]
-      new_posture[self.joint_names.index('RShoulderPitch')] = [new_posture[self.joint_names.index('RShoulderPitch')][0] - 0.4] # 0.5
-#      new_posture[self.joint_names.index('R_SHOULDER_R')] = [new_posture[self.joint_names.index('R_SHOULDER_R')][0] + 0.3]
-
-      romeo_real.mbc.q = new_posture
 
     # check if there are still states in the FSM to be executed
     def checkSequence(self):
@@ -283,8 +262,8 @@ if __name__ == '__main__':
         print 'idling'
 
     def wait_init_position(self, rs):
-      self.fakeControl()
-      self.addUncertainties()
+      # self.fakeControl()
+      # self.addUncertainties()
       if rhPosTask.eval().norm() < 0.1 and rhPosTask.speed().norm() < 0.001:
         if test_mode != 'posTask':
           # remove the right hand positioning task and replace it with a position based visual servoing task
@@ -299,7 +278,7 @@ if __name__ == '__main__':
         (trans, quat) = tfListener.lookupTransform('/0/LEye', '0/CameraLeftEye_optical_frame', rospy.Time(0))
         X_b_gaze = transform.fromTf(trans, quat)
 
-        #X_gaze_object = self.fake_vision('/object/base_link')
+        #target_pose_hand = self.fake_vision(self.hand_frame)
         self.gazeTask = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('LEye'),
                                         self.target_pose_hand.translation(), X_b_gaze)
@@ -315,8 +294,6 @@ if __name__ == '__main__':
         print 'tf exception'
 
     def visual_servo_grasp(self, rs):
-      self.fakeControl()
-      self.addUncertainties()
 
       if test_mode == 'posTask':
         # test: update the position task instead
@@ -333,11 +310,12 @@ if __name__ == '__main__':
         # update PBVS scheme with the pose of the real hand in the target frame
         rhPbvsTask.error(pbvs_X_b_s * self.X_gaze_hand * self.X_gaze_object.inv())
 
-      if (self.status_tracker_hand == 1):
-        self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
-      else:
-        self.gazeTask.error(self.X_gaze_hand.translation(), Vector2d(0.0, 0.0)) 
-
+        if (self.status_tracker_hand == 1):
+          self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
+        else:
+          print 'X_gaze_hand: ' , self.X_gaze_hand.translation()
+          self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.0, 0.0)) 
+      #print 'eval: ', self.gazeTask.eval()
 
     # main control loop
     def run(self, rs):
@@ -356,7 +334,7 @@ if __name__ == '__main__':
         curTime = rs.header.stamp
 
         romeoJsp.publish(curTime)
-        romeo_real_Jsp.publish(curTime)
+        #romeo_real_Jsp.publish(curTime)
         self.task_error_pub.publish()
         qpsolver.send(curTime)
 
