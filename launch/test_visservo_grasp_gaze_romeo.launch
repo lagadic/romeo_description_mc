@@ -1,4 +1,6 @@
 <launch>
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.033096434903 0.0486815138012 0.0318448350088 0.577328318474 0.0275670521388 0.110292994864  0.80855891907 /0/r_wrist /0/rhand_target1 100" />
+
   <arg name="bag" default="false" />
 
   <!-- optirun arguments -->
@@ -7,8 +9,6 @@
   <!-- object behavior argument (interactive or pre-programmed) -->
   <arg name="interactive_mode" default="true" />
 
-  <!-- usage mode of the test -->
-  <arg name="test_mode" default="normal" />
 
   <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
   <param name="r2_description" command="cat $(find mc_env_description)/urdf/ground.urdf" />
@@ -30,7 +30,7 @@
 
     <node name="mr_qp_state_publisher" pkg="mc_visualization" type="mr_qp_state_publisher.py" />
     <rosparam param="source_list">[[0,'/robot/controls/joint_states']]</rosparam>
-    <node name="test_visservo_grasp_gaze_romeo" pkg="romeo_mc" type="test_visservo_grasp_gaze_romeo.py" args="$(arg test_mode)" output="screen">
+    <node name="test_visservo_grasp_gaze_romeo" pkg="romeo_mc" type="test_visservo_grasp_gaze_romeo.py" output="screen">
       <remap from="qp_joint_states" to="/robot/controls/joint_states" />
     </node>
     <node name="mr_contact_force_publisher" pkg="mc_visualization" type="mr_contact_force_visualization.py"/>
@@ -43,6 +43,7 @@
     </group>
 
   </group>
+
 
 
   <!-- GUIs-->
@@ -75,4 +76,7 @@
   <!-- fake camera-->
   <node name="fake_camera" pkg="romeo_mc" type="fake_camera.py" />
 
+
+
 </launch>
+

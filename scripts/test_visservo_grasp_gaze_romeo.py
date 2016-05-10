@@ -2,7 +2,7 @@
 import roslib; roslib.load_manifest('mc_control')
 import rospy
 import numpy as np
-from eigen3 import Vector3d, Matrix3d, toEigenX, Vector2d
+from eigen3 import Vector3d, Matrix3d, toEigenX, Vector2d, Quaterniond
 import spacevecalg as sva
 import rbdyn as rbd
 import tasks
@@ -30,9 +30,8 @@ from helper_scripts.fake_vision import fakeVision
 
 """
 This script is used to test a position-based visual servoing task in the
-multi_contact framework as a QP task. Two robots are used one to represent the
-internal knowledge which is imprecise and another to represent reality. An
-interactive object is used to define the goal.
+multi_contact framework as a QP task. An image-visual servoing controll is added such
+that the gaze tracke the hand. An interactive object is used to define the goal.
 """
 
 # control parameters
@@ -40,15 +39,6 @@ timeStep = 0.005
 
 if __name__ == '__main__':
   rospy.init_node('test_visservo_grasp_gaze_romeo')
-  test_mode = sys.argv[1]
-  print 'usage mode is ', test_mode
-  if test_mode not in ['normal','posTask','surface']:
-    rospy.logwarn('Invalid test_mode, defaulting to normal\
-       \nusage: test_visservo_grasp.py test_mode\
-       \nwhere test_mode can be: \
-       \n normal - servo right wrist with PBVS \
-       \n posTask - servo right_wrist with position Task equivalent to PBVS \
-       \n surface - servo the right_hand surface with PBVS')
 
   # load the robot and the environment
   robots = loadRobots()
@@ -96,6 +86,8 @@ if __name__ == '__main__':
   qpsolver.addConstraintSet(contactConstraint)
   qpsolver.addConstraintSet(dynamicsConstraint1)
 
+  tfListener = tf.TransformListener()
+  tfWriter = tf.TransformBroadcaster()
 
   # Self-collision robot
   cols = []
@@ -106,7 +98,7 @@ if __name__ == '__main__':
       cols.append(Collision(lab, rab, 0.10, 0.05, 0.))
 
 
-  cols += [Collision('torso', 'HeadRoll_link', 0.05, 0.01, 0.),
+  cols += [Collision('torso', 'HeadRoll_link', 0.1, 0.02, 0.),
            Collision('l_wrist', 'torso', 0.05, 0.01, 0.), 
            Collision('l_wrist', 'body', 0.05, 0.01, 0.),
            Collision('l_wrist', 'NeckPitch_link', 0.05, 0.01, 0.),
@@ -155,6 +147,7 @@ if __name__ == '__main__':
   rf_pos_goal = rFoot.X_0_s(romeo).translation()
   rf_ori_goal = rFoot.X_0_s(romeo).rotation()
   rh_pos_goal = rHand.X_0_s(romeo).translation()# + Vector3d(0.1,  0.1, 0.0) #+ Vector3d(0.1, -0.1, 0.3)
+  lh_ori_goal = lHand.X_0_s(romeo).rotation()
   lh_pos_goal = lHand.X_0_s(romeo).translation()# + Vector3d(0.1,  0.1, 0.3)
   hand_rotation_goal = rHand.X_0_s(romeo).rotation()
   #lHand.X_0_s(romeo).rotation() #sva.RotY(-np.pi/2.)
@@ -171,29 +164,33 @@ if __name__ == '__main__':
                                            5., 100.)
   torsoOriTask, torsoOriTaskSp = orientationTask(robots, romeo_index, 'torso',
                                                  Matrix3d.Identity(), 10., 10.)
-  comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
-                               5., 100000.)
+  headOriTask, headOriTaskSp = orientationTask(robots, romeo_index, 'HeadRoll_link',
+                                                 list(romeo.mbc.bodyPosW)[romeo.bodyIndexByName('HeadRoll_link')].rotation(), 10., 10.)
+  # comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
+  #                              5., 100000.)
 
-  # Set up tasks specific to test_mode
-  if test_mode == 'posTask':
-    posTask_X_b_s = Vector3d.Zero()
-  else:
-    posTask_X_b_s = rHand.X_b_s.translation()
-    if test_mode == 'surface':
-      pbvs_X_b_s = rHand.X_b_s
-    else:
-      pbvs_X_b_s = sva.PTransformd.Identity()
-    rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
-                                        sva.PTransformd.Identity(),
-                                        5., 1000., pbvs_X_b_s)
+
+
+  comTask, comTaskSp = comTask(robots, romeo_index, Vector3d(0,0, rbd.computeCoM(romeo.mb, romeo.mbc)[2]),
+                               5., 100000.)
+  # Set up tasks 
+  trans = (0.033096434903, 0.0486815138012, 0.0318448350088)
+  quat = (0.577328318474, 0.0275670521388, 0.110292994864, 0.80855891907)
+  offset_X_b_s = transform.fromTf(trans, quat)
+  rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
+                                     sva.PTransformd.Identity(),
+                                     5., 1000., offset_X_b_s)
 
   rhPosTask, rhPosTaskSp = positionTask(robots, romeo_index, 'r_wrist',
                                         rh_pos_goal,
-                                        5., 1000., posTask_X_b_s)
-  if test_mode == 'posTask':
-    task_error_to_pub = rhPosTask
-  else:
-    task_error_to_pub = rhPbvsTask
+                                        5., 1000., rHand.X_b_s.translation())
+  lhPosTask, lhPosTaskSp = positionTask(robots, romeo_index, 'l_wrist',
+                                      lh_pos_goal,
+                                      5., 1000., lHand.X_b_s.translation() )
+
+  lhOriTask, lhOriTaskSp = orientationTask(robots, romeo_index, 'l_wrist', lh_ori_goal,
+                                           5., 100.)
+  task_error_to_pub = rhPbvsTask
 
   # disable the CoM height
   com_axis_weight = np.mat([1., 1., 0.]).T
@@ -201,9 +198,13 @@ if __name__ == '__main__':
 
   # add tasks to the solver
   qpsolver.solver.addTask(rhPosTaskSp)
+  qpsolver.solver.addTask(lhPosTaskSp) 
   qpsolver.solver.addTask(rhOriTaskSp)
+  qpsolver.solver.addTask(lhOriTaskSp)
+
 
   qpsolver.solver.addTask(torsoOriTaskSp)
+  qpsolver.solver.addTask(headOriTaskSp)
   qpsolver.solver.addTask(comTaskSp)
   qpsolver.solver.addTask(postureTask1)
 
@@ -216,9 +217,6 @@ if __name__ == '__main__':
   qpsolver.setContacts([c1L, c1R])
   qpsolver.update()
 
-  tfListener = tf.TransformListener()
-  tfWriter = tf.TransformBroadcaster()
-
   class Controller(object):
     def __init__(self):
       self.isRunning = True
@@ -227,23 +225,17 @@ if __name__ == '__main__':
       # initialize fake Vision
       self.X_gaze_hand = sva.PTransformd(Vector3d.Zero()) #TODO: better init
       self.X_gaze_object = sva.PTransformd(Vector3d.Zero()) #TODO: better init
-      self.hand_frame = '/'+str(romeo_index)+'/r_wrist'
+      # self.hand_frame = '/'+str(romeo_index)+'/r_wrist'
+      self.hand_frame = '/'+str(romeo_index)+'/rhand_target1'
       self.object_frame = '/object/base_link'
-      if test_mode == 'posTask':
-        self.tf_base_frame = '/map'
-      else:
-        self.tf_base_frame = '/'+str(romeo_index)+'/CameraLeftEye_optical_frame'
+      self.tf_base_frame = '/'+str(romeo_index)+'/CameraLeftEye_optical_frame'
       self.fake_vision = fakeVision(self.tf_base_frame)
 
       # Target pose 
       self.target_pose_hand = sva.PTransformd(Vector3d(0,0,1))
       # Status tracker hand target
       self.status_tracker_hand = 0;
-
-      # initialize joint names for adding uncertainty
-      #self.joint_names = map(lambda x: x.name(), list(romeo.mb.joints()))
-
-      # for plotting task error
+      # # for plotting task error
       self.task_error_pub = TaskErrorPub(task_error_to_pub, 'rh_PBVS_task')
 
       # sequence of states - each must correspond to a method of this object
@@ -265,12 +257,11 @@ if __name__ == '__main__':
       # self.fakeControl()
       # self.addUncertainties()
       if rhPosTask.eval().norm() < 0.1 and rhPosTask.speed().norm() < 0.001:
-        if test_mode != 'posTask':
-          # remove the right hand positioning task and replace it with a position based visual servoing task
-          qpsolver.solver.removeTask(rhPosTaskSp)
-          qpsolver.solver.removeTask(rhOriTaskSp)
-          qpsolver.solver.addTask(rhPbvsTaskSp)
-          qpsolver.update()
+        # remove the right hand positioning task and replace it with a position based visual servoing task
+        qpsolver.solver.removeTask(rhPosTaskSp)
+        qpsolver.solver.removeTask(rhOriTaskSp)
+        qpsolver.solver.addTask(rhPbvsTaskSp)
+        qpsolver.update()
         self.checkSequence()
 
     def init_gaze_task(self, rs):
@@ -295,26 +286,15 @@ if __name__ == '__main__':
 
     def visual_servo_grasp(self, rs):
 
-      if test_mode == 'posTask':
-        # test: update the position task instead
-        X_world_object = self.fake_vision(self.object_frame)
-        X_world_hand_real = self.fake_vision(self.hand_frame)
-        X_world_hand = self.fake_vision('/'+str(romeo_index)+'/r_wrist') # internal knowledge
+      self.X_gaze_hand = self.fake_vision(self.hand_frame)
+      self.X_gaze_object = self.fake_vision(self.object_frame)
+      # update PBVS scheme with the pose of the real hand in the target frame
+      rhPbvsTask.error(self.X_gaze_hand * self.X_gaze_object.inv())
 
-        #note: compensate the internal state update by re-adding it
-        rhPosTask.position(X_world_object.translation() - X_world_hand_real.translation() + X_world_hand.translation())
-
+      if (self.status_tracker_hand == 1):
+        self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
       else:
-        self.X_gaze_hand = self.fake_vision(self.hand_frame)
-        self.X_gaze_object = self.fake_vision(self.object_frame)
-        # update PBVS scheme with the pose of the real hand in the target frame
-        rhPbvsTask.error(pbvs_X_b_s * self.X_gaze_hand * self.X_gaze_object.inv())
-
-        if (self.status_tracker_hand == 1):
-          self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
-        else:
-          print 'X_gaze_hand: ' , self.X_gaze_hand.translation()
-          self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.0, 0.0)) 
+        self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.0, 0.0)) 
       #print 'eval: ', self.gazeTask.eval()
 
     # main control loop
