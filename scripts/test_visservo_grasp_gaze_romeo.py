@@ -98,7 +98,7 @@ if __name__ == '__main__':
       cols.append(Collision(lab, rab, 0.10, 0.05, 0.))
 
 
-  cols += [Collision('torso', 'HeadRoll_link', 0.1, 0.02, 0.),
+  cols += [Collision('torso', 'HeadRoll_link', 0.06, 0.02, 0.),# 0.1, 0.02, 0.
            Collision('l_wrist', 'torso', 0.05, 0.01, 0.), 
            Collision('l_wrist', 'body', 0.05, 0.01, 0.),
            Collision('l_wrist', 'NeckPitch_link', 0.05, 0.01, 0.),
@@ -153,58 +153,60 @@ if __name__ == '__main__':
   #lHand.X_0_s(romeo).rotation() #sva.RotY(-np.pi/2.)
 
   # Setting up the tasks
-  postureTask1 = tasks.qp.PostureTask(robots.mbs, romeo_index,
-                                      romeo_q, 0.1, 10.)
-  rfPosTask, rfPosTaskSp = positionTask(robots, romeo_index, 'r_ankle',
-                                        rf_pos_goal,
-                                        5., 1000., rFoot.X_b_s.translation())
-  rfOriTask, rfOriTaskSp = orientationTask(robots, romeo_index, 'r_ankle', rf_ori_goal,
-                                           5., 100.)
+  postureTask1 = tasks.qp.PostureTask(robots.mbs, romeo_index, romeo_q, 0.1, 10.)
+
+  # rfPosTask, rfPosTaskSp = positionTask(robots, romeo_index, 'r_ankle',
+  #                                       rf_pos_goal,
+  #                                       5., 1000., rFoot.X_b_s.translation())
+  # rfOriTask, rfOriTaskSp = orientationTask(robots, romeo_index, 'r_ankle', rf_ori_goal,
+  #                                          5., 100.)
+  
   rhOriTask, rhOriTaskSp = orientationTask(robots, romeo_index, 'r_wrist', hand_rotation_goal,
-                                           5., 100.)
+                                           2., 100.)
   torsoOriTask, torsoOriTaskSp = orientationTask(robots, romeo_index, 'torso',
                                                  Matrix3d.Identity(), 10., 10.)
   headOriTask, headOriTaskSp = orientationTask(robots, romeo_index, 'HeadRoll_link',
                                                  list(romeo.mbc.bodyPosW)[romeo.bodyIndexByName('HeadRoll_link')].rotation(), 10., 10.)
-  # comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
-  #                              5., 100000.)
-
-
-
-  comTask, comTaskSp = comTask(robots, romeo_index, Vector3d(0,0, rbd.computeCoM(romeo.mb, romeo.mbc)[2]),
+  comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
                                5., 100000.)
+
+  # comTask, comTaskSp = comTask(robots, romeo_index, Vector3d(0,0, rbd.computeCoM(romeo.mb, romeo.mbc)[2]),
+  #                              5., 100000.)
   # Set up tasks 
   trans = (0.033096434903, 0.0486815138012, 0.0318448350088)
   quat = (0.577328318474, 0.0275670521388, 0.110292994864, 0.80855891907)
   offset_X_b_s = transform.fromTf(trans, quat)
   rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
                                      sva.PTransformd.Identity(),
-                                     5., 1000., offset_X_b_s)
+                                     2., 1000., offset_X_b_s)
+  # rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
+  #                                    sva.PTransformd.Identity(),
+  #                                    5., 1000.)
 
   rhPosTask, rhPosTaskSp = positionTask(robots, romeo_index, 'r_wrist',
                                         rh_pos_goal,
-                                        5., 1000., rHand.X_b_s.translation())
+                                        2., 1000., rHand.X_b_s.translation())
   lhPosTask, lhPosTaskSp = positionTask(robots, romeo_index, 'l_wrist',
                                       lh_pos_goal,
-                                      5., 1000., lHand.X_b_s.translation() )
+                                      2., 1000., lHand.X_b_s.translation() )
 
   lhOriTask, lhOriTaskSp = orientationTask(robots, romeo_index, 'l_wrist', lh_ori_goal,
-                                           5., 100.)
+                                           2., 100.)
   task_error_to_pub = rhPbvsTask
 
   # disable the CoM height
-  com_axis_weight = np.mat([1., 1., 0.]).T
-  comTaskSp.dimWeight(toEigenX(com_axis_weight))
+  # com_axis_weight = np.mat([1., 1., 0.]).T
+  # comTaskSp.dimWeight(toEigenX(com_axis_weight))
 
   # add tasks to the solver
   qpsolver.solver.addTask(rhPosTaskSp)
-  qpsolver.solver.addTask(lhPosTaskSp) 
   qpsolver.solver.addTask(rhOriTaskSp)
+  qpsolver.solver.addTask(lhPosTaskSp) 
   qpsolver.solver.addTask(lhOriTaskSp)
 
 
   qpsolver.solver.addTask(torsoOriTaskSp)
-  qpsolver.solver.addTask(headOriTaskSp)
+  #qpsolver.solver.addTask(headOriTaskSp)
   qpsolver.solver.addTask(comTaskSp)
   qpsolver.solver.addTask(postureTask1)
 
@@ -273,7 +275,7 @@ if __name__ == '__main__':
         self.gazeTask = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('LEye'),
                                         self.target_pose_hand.translation(), X_b_gaze)
-        self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 10., 50.)
+        self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 2., 50.)
         qpsolver.solver.addTask(self.gazeTaskSp)
 
         # for plotting task error
@@ -292,7 +294,7 @@ if __name__ == '__main__':
       rhPbvsTask.error(self.X_gaze_hand * self.X_gaze_object.inv())
 
       if (self.status_tracker_hand == 1):
-        self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
+        self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.05)) #center the object in the image frame
       else:
         self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.0, 0.0)) 
       #print 'eval: ', self.gazeTask.eval()
