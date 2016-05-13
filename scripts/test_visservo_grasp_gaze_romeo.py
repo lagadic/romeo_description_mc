@@ -35,7 +35,8 @@ that the gaze tracke the hand. An interactive object is used to define the goal.
 """
 
 # control parameters
-timeStep = 0.005
+#timeStep = 0.005
+timeStep = 0.01
 
 if __name__ == '__main__':
   rospy.init_node('test_visservo_grasp_gaze_romeo')
@@ -98,7 +99,7 @@ if __name__ == '__main__':
       cols.append(Collision(lab, rab, 0.10, 0.05, 0.))
 
 
-  cols += [Collision('torso', 'HeadRoll_link', 0.06, 0.02, 0.),# 0.1, 0.02, 0.
+  cols += [Collision('torso', 'HeadRoll_link', 0.055, 0.015, 0.),# 0.1, 0.02, 0.
            Collision('l_wrist', 'torso', 0.05, 0.01, 0.), 
            Collision('l_wrist', 'body', 0.05, 0.01, 0.),
            Collision('l_wrist', 'NeckPitch_link', 0.05, 0.01, 0.),
@@ -178,7 +179,7 @@ if __name__ == '__main__':
   offset_X_b_s = transform.fromTf(trans, quat)
   rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
                                      sva.PTransformd.Identity(),
-                                     2., 1000., offset_X_b_s)
+                                     2., 3000., offset_X_b_s) # 1000
   # rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
   #                                    sva.PTransformd.Identity(),
   #                                    5., 1000.)
@@ -291,7 +292,12 @@ if __name__ == '__main__':
       self.X_gaze_hand = self.fake_vision(self.hand_frame)
       self.X_gaze_object = self.fake_vision(self.object_frame)
       # update PBVS scheme with the pose of the real hand in the target frame
-      rhPbvsTask.error(self.X_gaze_hand * self.X_gaze_object.inv())
+
+      if (self.status_tracker_hand == 1):
+        rhPbvsTask.error(self.target_pose_hand * self.X_gaze_object.inv())
+      else:
+        rhPbvsTask.error(self.X_gaze_hand * self.X_gaze_object.inv())
+
 
       if (self.status_tracker_hand == 1):
         self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.05)) #center the object in the image frame

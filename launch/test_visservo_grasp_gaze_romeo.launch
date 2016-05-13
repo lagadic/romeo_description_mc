@@ -2,6 +2,7 @@
   <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.033096434903 0.0486815138012 0.0318448350088 0.577328318474 0.0275670521388 0.110292994864  0.80855891907 /0/r_wrist /0/rhand_target1 100" />
 
   <arg name="bag" default="false" />
+<!--   <arg name="ROBOT_CONTROL" default="false" /> -->
 
   <!-- optirun arguments -->
   <arg name="optirun" default="false" />
@@ -16,11 +17,11 @@
 <!--   <param name="r3_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
  -->
 
-  <rosparam param="/robots/description" subst_value="True">['$(find romeo_description_mc)/urdf/romeo.urdf','$(find mc_env_description)/urdf/ground.urdf','$(find romeo_description_mc)/urdf/romeo.urdf']</rosparam>
-  <rosparam param="/robots/modules">['romeo', 'ground', 'romeo']</rosparam>
-  <rosparam param="/robots/rsdf_dirs" subst_value="True">['$(find romeo_description_mc)/rsdf','$(find mc_env_description)/rsdf/ground','$(find romeo_description_mc)/rsdf']</rosparam>
+  <rosparam param="/robots/description" subst_value="True">['$(find romeo_description_mc)/urdf/romeo.urdf','$(find mc_env_description)/urdf/ground.urdf']</rosparam>
+  <rosparam param="/robots/modules">['romeo', 'ground']</rosparam>
+  <rosparam param="/robots/rsdf_dirs" subst_value="True">['$(find romeo_description_mc)/rsdf','$(find mc_env_description)/rsdf/ground']</rosparam>
 
-  <rosparam param="/robots/bases">[[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]</rosparam>
+  <rosparam param="/robots/bases">[[0,0,0,0,0,0],[0,0,0,0,0,0]]</rosparam>
   <param name="stabilizer" value="true" />
 
   <group ns="robot">
@@ -38,7 +39,7 @@
     <!-- Use simulated ticker -->
     <group unless="$(optenv ROBOT_CONTROL false)">
       <node name="ticker" pkg="mc_control" type="mr_ticker.py">
-        <param name="publish_frequency" type="double" value="200" />
+        <param name="publish_frequency" type="double" value="100" />
       </node>
     </group>
 
