@@ -2,13 +2,14 @@
   <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.033096434903 0.0486815138012 0.0318448350088 0.577328318474 0.0275670521388 0.110292994864  0.80855891907 /0/r_wrist /0/rhand_target1 100" />
 
   <arg name="bag" default="false" />
-<!--   <arg name="ROBOT_CONTROL" default="false" /> -->
 
   <!-- optirun arguments -->
   <arg name="optirun" default="false" />
 
   <!-- object behavior argument (interactive or pre-programmed) -->
   <arg name="interactive_mode" default="true" />
+
+  <arg name="simulated_robot" default="true" />
 
 
   <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
@@ -37,11 +38,11 @@
     <node name="mr_contact_force_publisher" pkg="mc_visualization" type="mr_contact_force_visualization.py"/>
 
     <!-- Use simulated ticker -->
-    <group unless="$(optenv ROBOT_CONTROL false)">
+  <group if="$(arg simulated_robot)">
       <node name="ticker" pkg="mc_control" type="mr_ticker.py">
         <param name="publish_frequency" type="double" value="100" />
       </node>
-    </group>
+  </group>
 
   </group>
 

@@ -168,11 +168,13 @@ if __name__ == '__main__':
                                                  Matrix3d.Identity(), 10., 10.)
   headOriTask, headOriTaskSp = orientationTask(robots, romeo_index, 'HeadRoll_link',
                                                  list(romeo.mbc.bodyPosW)[romeo.bodyIndexByName('HeadRoll_link')].rotation(), 10., 10.)
-  comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
-                               5., 100000.)
-
-  # comTask, comTaskSp = comTask(robots, romeo_index, Vector3d(0,0, rbd.computeCoM(romeo.mb, romeo.mbc)[2]),
+  # comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
   #                              5., 100000.)
+
+  # print "COM:" , rbd.computeCoM(romeo.mb, romeo.mbc) # : -0.0482481,-2.00112e-09, 0.694905
+
+  comTask, comTaskSp = comTask(robots, romeo_index, Vector3d(-0.02,0, rbd.computeCoM(romeo.mb, romeo.mbc)[2]),
+                               5., 100000.)
   # Set up tasks 
   trans = (0.033096434903, 0.0486815138012, 0.0318448350088)
   quat = (0.577328318474, 0.0275670521388, 0.110292994864, 0.80855891907)
@@ -236,6 +238,8 @@ if __name__ == '__main__':
 
       # Target pose 
       self.target_pose_hand = sva.PTransformd(Vector3d(0,0,1))
+      # Target pose 
+      self.target_des_pose_hand = sva.PTransformd(Vector3d(0,0,1))      
       # Status tracker hand target
       self.status_tracker_hand = 0;
       # # for plotting task error
@@ -276,7 +280,7 @@ if __name__ == '__main__':
         self.gazeTask = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('LEye'),
                                         self.target_pose_hand.translation(), X_b_gaze)
-        self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 2., 50.)
+        self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 1., 50.)
         qpsolver.solver.addTask(self.gazeTaskSp)
 
         # for plotting task error
@@ -294,15 +298,34 @@ if __name__ == '__main__':
       # update PBVS scheme with the pose of the real hand in the target frame
 
       if (self.status_tracker_hand == 1):
-        rhPbvsTask.error(self.target_pose_hand * self.X_gaze_object.inv())
+        rhPbvsTask.error(self.target_pose_hand.inv() * self.target_des_pose_hand)
       else:
         rhPbvsTask.error(self.X_gaze_hand * self.X_gaze_object.inv())
+
+      if (self.status_tracker_hand == 1):
+        print "---------------------------------------------------"
+        print "Real error: "
+        error_ = self.target_pose_hand.inv() * self.target_des_pose_hand
+        print  "Translation:"
+        print error_.translation()
+        print  "Rotation:"
+        print error_.rotation()        
+        print "---------------------------------------------------"
+
+      # print "---------------------------------------------------"
+      # print "Virtual error: "
+      # b = self.X_gaze_hand * self.X_gaze_object.inv()
+      # print  "Translation:"
+      # print b.translation()
+      # print  "Rotation:"
+      # print b.rotation()   
+      # print "---------------------------------------------------"
 
 
       if (self.status_tracker_hand == 1):
         self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.05)) #center the object in the image frame
       else:
-        self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.0, 0.0)) 
+        self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.0, 0.05)) 
       #print 'eval: ', self.gazeTask.eval()
 
     # main control loop
@@ -351,6 +374,18 @@ if __name__ == '__main__':
                         "/Target_hand",
                         "0/CameraLeftEye_optical_frame")
 
+    def objectDesPoseCB(self, pose):
+      self.target_des_pose_hand = transform.fromPose(pose.pose)
+      #print self.target_pose.translation()
+      [tf_tran,tf_quat] = transform.toTf(self.target_des_pose_hand)
+      tfWriter.sendTransform(tf_tran,
+                        tf_quat,
+                        rospy.Time.now(),
+                        "/Des_Target_hand",
+                        "0/CameraLeftEye_optical_frame")
+
+
+
     def statusTrackerCB(self, status):
       self.status_tracker_hand = status.data
 
@@ -363,6 +398,8 @@ if __name__ == '__main__':
                    controller.run, queue_size=10, tcp_nodelay=True)
   rospy.Subscriber('/visp_blobs_tracker/object_position', PoseStamped,
                    controller.objectPoseCB, queue_size=10, tcp_nodelay=True)
+  rospy.Subscriber('/visp_blobs_tracker/object_des_position', PoseStamped,
+                   controller.objectDesPoseCB, queue_size=10, tcp_nodelay=True)
   rospy.Subscriber('/visp_blobs_tracker/status', Int8,
                    controller.statusTrackerCB, queue_size=10, tcp_nodelay=True)
 
