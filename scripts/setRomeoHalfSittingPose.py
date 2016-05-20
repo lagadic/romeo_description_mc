@@ -31,8 +31,15 @@ def main(robotIP):
 
     for name in bodyNames:
     	if (halfSitting.has_key(name)):
-    		angleLists.append(halfSitting.get(name))
-    		timeLists.append(2.0)
+            if name == 'RAnkleRoll':
+                angleLists.append(0.0260776)
+                timeLists.append(2.0)
+            elif (name == 'LAnkleRoll'):
+                angleLists.append(-0.087436)
+                timeLists.append(2.0)
+            else:
+                angleLists.append(halfSitting.get(name))
+                timeLists.append(2.0)
     	else:
     		print "Error:  %d is not a valid joint name." % name
     		sys.exit(1)
