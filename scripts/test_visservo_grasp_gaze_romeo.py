@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
   # print "COM:" , rbd.computeCoM(romeo.mb, romeo.mbc) # : -0.0482481,-2.00112e-09, 0.694905
 
-  comTask, comTaskSp = comTask(robots, romeo_index, Vector3d(-0.02,0, rbd.computeCoM(romeo.mb, romeo.mbc)[2]),
+  comTask, comTaskSp = comTask(robots, romeo_index, Vector3d(-0.02, 0, rbd.computeCoM(romeo.mb, romeo.mbc)[2]),
                                5., 100000.)
   # Set up tasks 
   trans = (0.033096434903, 0.0486815138012, 0.0318448350088)
@@ -298,7 +298,7 @@ if __name__ == '__main__':
       # update PBVS scheme with the pose of the real hand in the target frame
 
       if (self.status_tracker_hand == 1):
-        rhPbvsTask.error(self.target_pose_hand.inv() * self.target_des_pose_hand)
+        rhPbvsTask.error(self.target_pose_hand * self.target_des_pose_hand.inv()) # (X_c_h * X_c_dh.inv())
       else:
         rhPbvsTask.error(self.X_gaze_hand * self.X_gaze_object.inv())
 
@@ -365,7 +365,7 @@ if __name__ == '__main__':
 
 
     def objectPoseCB(self, pose):
-      self.target_pose_hand = transform.fromPose(pose.pose)
+      self.target_pose_hand = transform.fromPose(pose.pose) # X_c_h
       #print self.target_pose.translation()
       [tf_tran,tf_quat] = transform.toTf(self.target_pose_hand)
       tfWriter.sendTransform(tf_tran,
@@ -375,7 +375,7 @@ if __name__ == '__main__':
                         "0/CameraLeftEye_optical_frame")
 
     def objectDesPoseCB(self, pose):
-      self.target_des_pose_hand = transform.fromPose(pose.pose)
+      self.target_des_pose_hand = transform.fromPose(pose.pose) # X_c_dh
       #print self.target_pose.translation()
       [tf_tran,tf_quat] = transform.toTf(self.target_des_pose_hand)
       tfWriter.sendTransform(tf_tran,
