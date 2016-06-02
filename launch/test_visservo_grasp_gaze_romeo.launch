@@ -1,6 +1,13 @@
 <launch>
   <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.033096434903 0.0486815138012 0.0318448350088 0.577328318474 0.0275670521388 0.110292994864  0.80855891907 /0/r_wrist /0/rhand_target1 100" />
 
+<!--   <node pkg="tf" type="static_transform_publisher" name="link2_broadcaster" args="-0.03765 0.126563 0.002561 -0.67277591331 0.687752570778 0.0465059942478 -0.268712047286 /object_position /grasp_box_pose  100" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="link2_broadcaster" args="-0.07765 0.126563 0.002561 -0.67277591331 0.687752570778 0.0465059942478 -0.268712047286 /object_position /grasp_box_pose  100" />
+
+  <node pkg="tf" type="static_transform_publisher" name="link3_broadcaster" args="0 0 0 0 0 0 /0/CameraLeftEye_optical_frame /CameraTop_optical_frame  100" />
+
+        
+
   <arg name="bag" default="false" />
 
   <!-- optirun arguments -->
@@ -10,6 +17,11 @@
   <arg name="interactive_mode" default="true" />
 
   <arg name="simulated_robot" default="true" />
+
+ <!-- Demo mode:
+                test : PBVS hand using the desired pose of the hand published by visp_blob_tracker
+                box_grasping : PBVS hand using MBT to grasp an object-->
+  <arg name="mode" default="box_grasping" />
 
 
   <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
@@ -32,7 +44,7 @@
 
     <node name="mr_qp_state_publisher" pkg="mc_visualization" type="mr_qp_state_publisher.py" />
     <rosparam param="source_list">[[0,'/robot/controls/joint_states']]</rosparam>
-    <node name="test_visservo_grasp_gaze_romeo" pkg="romeo_mc" type="test_visservo_grasp_gaze_romeo.py" output="screen">
+    <node name="test_visservo_grasp_gaze_romeo" pkg="romeo_mc" type="test_visservo_grasp_gaze_romeo.py" args="$(arg mode)" output="screen">
       <remap from="qp_joint_states" to="/robot/controls/joint_states" />
     </node>
     <node name="mr_contact_force_publisher" pkg="mc_visualization" type="mr_contact_force_visualization.py"/>
@@ -66,9 +78,9 @@
     <param name="tf_prefix" value="object"/>
 <!--     <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.24644 -0.22262 0.86438 1.57 0. 0. small_box.urdf 200"/> -->
 <!--  <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.20644 -0.22262 0.83438 1.57 0. 0. small_box.urdf 200"/> -->
- 
-  <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.18049 -0.24736 0.82829 2.1 0. 0. small_box.urdf 200"/>
- </group>
+
+  <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args=" 0.32429 -0.28784 1.0078 2.7 0. 0. small_box.urdf 200"/>
+ </group> <!--0.18049 -0.24736 0.82829 OLD 0.24642 -0.28763 1.0088-->
 
   <group ns="object" unless="$(arg interactive_mode)">
     <param name="tf_prefix" value="object"/>

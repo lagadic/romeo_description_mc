@@ -12,7 +12,7 @@ from mc_solver import MRQPSolver, DynamicsConstraint, ContactConstraint, \
 from joint_state_publisher import JointStatePublisher
 from mc_robot_msgs.msg import MCRobotState
 from ask_user import ask_user
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, TransformStamped
 from std_msgs.msg import Int8
 
 import tf
@@ -40,8 +40,16 @@ timeStep = 0.01
 
 if __name__ == '__main__':
   rospy.init_node('test_visservo_grasp_gaze_romeo')
+  mode = sys.argv[1]
+  print 'usage mode is ', mode
+  if mode not in ['test','box_grasping']:
+    rospy.logwarn('Invalid mode, defaulting to normal\
+       \nusage: test_visservo_grasp_gaze_romeo.py mode\
+       \nwhere mode can be: \
+       \n test : PBVS hand using the desired pose of the hand published by visp_blob_tracker \
+       \n box_grasping : PBVS hand using MBT to grasp and object' )
 
-  # load the robot and the environment
+       # load the robot and the environment
   robots = loadRobots()
   for r in robots.robots:
     r.mbc.gravity = Vector3d(0., 0., 9.81)
@@ -176,6 +184,7 @@ if __name__ == '__main__':
   comTask, comTaskSp = comTask(robots, romeo_index, Vector3d(-0.02, 0, rbd.computeCoM(romeo.mb, romeo.mbc)[2]),
                                5., 100000.)
   # Set up tasks 
+  # Transformation from r_wrist to hand target
   trans = (0.033096434903, 0.0486815138012, 0.0318448350088)
   quat = (0.577328318474, 0.0275670521388, 0.110292994864, 0.80855891907)
   offset_X_b_s = transform.fromTf(trans, quat)
@@ -197,6 +206,7 @@ if __name__ == '__main__':
                                            2., 100.)
   task_error_to_pub = rhPbvsTask
 
+
   # disable the CoM height
   # com_axis_weight = np.mat([1., 1., 0.]).T
   # comTaskSp.dimWeight(toEigenX(com_axis_weight))
@@ -204,6 +214,7 @@ if __name__ == '__main__':
   # add tasks to the solver
   qpsolver.solver.addTask(rhPosTaskSp)
   qpsolver.solver.addTask(rhOriTaskSp)
+
   qpsolver.solver.addTask(lhPosTaskSp) 
   qpsolver.solver.addTask(lhOriTaskSp)
 
@@ -236,14 +247,25 @@ if __name__ == '__main__':
       self.tf_base_frame = '/'+str(romeo_index)+'/CameraLeftEye_optical_frame'
       self.fake_vision = fakeVision(self.tf_base_frame)
 
-      # Target pose 
+      #  Hand Target pose 
       self.target_pose_hand = sva.PTransformd(Vector3d(0,0,1))
-      # Target pose 
+      #  Desired Hand Target pose 
       self.target_des_pose_hand = sva.PTransformd(Vector3d(0,0,1))      
       # Status tracker hand target
       self.status_tracker_hand = 0;
-      # # for plotting task error
+      #  Object pose
+      self.X_c_box = sva.PTransformd(Vector3d(0,0,1)) 
+      # Status tracker hand target
+      self.status_tracker_box = 0;
+
+      #  for plotting task error
       self.task_error_pub = TaskErrorPub(task_error_to_pub, 'rh_PBVS_task')
+
+      # Transformation from the box to hand target desired pose for the grasping
+      #trans = (-0.03765, 0.126563, 0.002561) 
+      trans = (-0.07765, 0.126563, 0.002561) 
+      quat = (-0.67277591331, 0.687752570778, 0.0465059942478, -0.268712047286)
+      self.offset_X_box_hd = transform.fromTf(trans, quat)
 
       # sequence of states - each must correspond to a method of this object
       self.fsm_sequence  = ['wait_init_position',
@@ -298,19 +320,37 @@ if __name__ == '__main__':
       # update PBVS scheme with the pose of the real hand in the target frame
 
       if (self.status_tracker_hand == 1):
-        rhPbvsTask.error(self.target_pose_hand * self.target_des_pose_hand.inv()) # (X_c_h * X_c_dh.inv())
+        if (mode == 'test' or mode == 'box_grasping' and self.status_tracker_box != 1):
+          rhPbvsTask.error(self.target_pose_hand * self.target_des_pose_hand.inv()) # (X_c_h * X_c_dh.inv())
+        elif (self.status_tracker_box == 1 and mode == 'box_grasping'):
+          # print "X_c_box: "
+          # print  self.X_c_box.translation()
+          # print "---------------"
+          # print "offset_X_box_hd: " 
+          # print self.offset_X_box_hd.translation()
+          # print "---------------"
+          # print "---------------------------------------------------"
+          # print "Real error: "
+          # error_ = self.target_pose_hand * self.X_c_box.inv() * self.offset_X_box_hd.inv()
+          # print  "Translation:"
+          # print error_.translation()
+          # print  "Rotation:"
+          # print error_.rotation()        
+          # print "---------------------------------------------------"
+          rhPbvsTask.error(self.target_pose_hand * self.X_c_box.inv() * self.offset_X_box_hd.inv() ) # (X_c_h * X_c_dh.inv())
+          # rhPbvsTask.error(self.target_pose_hand * self.target_pose_hand.inv() )          
       else:
         rhPbvsTask.error(self.X_gaze_hand * self.X_gaze_object.inv())
 
-      if (self.status_tracker_hand == 1):
-        print "---------------------------------------------------"
-        print "Real error: "
-        error_ = self.target_pose_hand.inv() * self.target_des_pose_hand
-        print  "Translation:"
-        print error_.translation()
-        print  "Rotation:"
-        print error_.rotation()        
-        print "---------------------------------------------------"
+      # if (self.status_tracker_hand == 1):
+        # print "---------------------------------------------------"
+        # print "Real error: "
+        # error_ = self.target_pose_hand.inv() * self.target_des_pose_hand
+        # print  "Translation:"
+        # print error_.translation()
+        # print  "Rotation:"
+        # print error_.rotation()        
+        # print "---------------------------------------------------"
 
       # print "---------------------------------------------------"
       # print "Virtual error: "
@@ -323,9 +363,12 @@ if __name__ == '__main__':
 
 
       if (self.status_tracker_hand == 1):
-        self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.0, 0.05)) #center the object in the image frame
+        # if (self.status_tracker_box ==1):
+        #   self.gazeTask.error((self.target_pose_hand.translation() + self.X_c_box.translation())/2, Vector2d(0.2, 0.0)) #center the object in the image frame
+        # else:
+        self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.1, 0.03)) #center the object in the image frame
       else:
-        self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.0, 0.05)) 
+        self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.2, 0.05)) 
       #print 'eval: ', self.gazeTask.eval()
 
     # main control loop
@@ -364,7 +407,7 @@ if __name__ == '__main__':
         print 'idling'
 
 
-    def objectPoseCB(self, pose):
+    def TargetPoseCB(self, pose):
       self.target_pose_hand = transform.fromPose(pose.pose) # X_c_h
       #print self.target_pose.translation()
       [tf_tran,tf_quat] = transform.toTf(self.target_pose_hand)
@@ -374,7 +417,7 @@ if __name__ == '__main__':
                         "/Target_hand",
                         "0/CameraLeftEye_optical_frame")
 
-    def objectDesPoseCB(self, pose):
+    def TargetDesPoseCB(self, pose):
       self.target_des_pose_hand = transform.fromPose(pose.pose) # X_c_dh
       #print self.target_pose.translation()
       [tf_tran,tf_quat] = transform.toTf(self.target_des_pose_hand)
@@ -384,10 +427,16 @@ if __name__ == '__main__':
                         "/Des_Target_hand",
                         "0/CameraLeftEye_optical_frame")
 
-
-
     def statusTrackerCB(self, status):
       self.status_tracker_hand = status.data
+
+    def objectDesPoseCB(self, pose):
+      self.X_c_box = transform.fromTransform(pose.transform) # X_c_box
+      #print self.target_pose.translation()
+
+    def statusMbtTrackerCB(self, status):
+      self.status_tracker_box = status.data
+
 
     def idle(self, rs):
       pass
@@ -397,10 +446,18 @@ if __name__ == '__main__':
   rospy.Subscriber('/robot/sensors/robot_state', MCRobotState,
                    controller.run, queue_size=10, tcp_nodelay=True)
   rospy.Subscriber('/visp_blobs_tracker/object_position', PoseStamped,
-                   controller.objectPoseCB, queue_size=10, tcp_nodelay=True)
-  rospy.Subscriber('/visp_blobs_tracker/object_des_position', PoseStamped,
-                   controller.objectDesPoseCB, queue_size=10, tcp_nodelay=True)
+                   controller.TargetPoseCB, queue_size=10, tcp_nodelay=True)
   rospy.Subscriber('/visp_blobs_tracker/status', Int8,
                    controller.statusTrackerCB, queue_size=10, tcp_nodelay=True)
+  rospy.Subscriber('/visp_blobs_tracker/object_des_position', PoseStamped,
+                   controller.TargetDesPoseCB, queue_size=10, tcp_nodelay=True)
+
+  if mode == 'box_grasping':
+    rospy.Subscriber('/object_position', TransformStamped,
+                   controller.objectDesPoseCB, queue_size=10, tcp_nodelay=True)
+    rospy.Subscriber('/tracker_mbt/status', Int8,
+                   controller.statusMbtTrackerCB, queue_size=10, tcp_nodelay=True)
+
+
 
   rospy.spin()

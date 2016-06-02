@@ -12,6 +12,8 @@ Panels:
         - /Target_hand_vision1
         - /Des_Target_hand1
         - /RealRobot1
+        - /Box1
+        - /GraspBox_pose1
       Splitter Ratio: 0.633846
     Tree Height: 867
   - Class: rviz/Selection
@@ -582,7 +584,7 @@ Visualization Manager:
       Marker Topic: /0/contact_forces_vec
       Name: Force vectors
       Namespaces:
-        {}
+        contact_force: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -590,7 +592,7 @@ Visualization Manager:
       Marker Topic: /0/contact_forces_norm
       Name: Force values
       Namespaces:
-        {}
+        contact_force_norm: true
       Queue Size: 100
       Value: true
     - Class: rviz/Axes
@@ -629,6 +631,7 @@ Visualization Manager:
       Unreliable: false
       Value: false
       Visibility:
+        "": true
         Axes: true
         Des_Target_hand: true
         Force values: true
@@ -716,6 +719,20 @@ Visualization Manager:
       Update Interval: 0
       Value: false
       Visual Enabled: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 0.1
+      Name: Box
+      Radius: 0.01
+      Reference Frame: object_position
+      Value: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 0.1
+      Name: GraspBox_pose
+      Radius: 0.01
+      Reference Frame: grasp_box_pose
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -740,7 +757,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.22194
+      Distance: 2.56256
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -752,10 +769,10 @@ Visualization Manager:
         Z: 0.787475
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.280398
+      Pitch: 0.620399
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.275402
+      Yaw: 3.41541
     Saved: ~
 Window Geometry:
   Camera:
@@ -775,5 +792,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1550
-  X: 55
+  X: 132
   Y: 14
