@@ -108,6 +108,10 @@ if __name__ == '__main__':
                                       romeo_q, 0.1, 10.)
   torsoOriTask, torsoOriTaskSp =\
     orientationTask(robots, romeo_index, 'torso', Matrix3d.Identity(), 10., 10.)
+  
+  # Head posture
+  headOriTask, headOriTaskSp = orientationTask(robots, romeo_index, 'HeadRoll_link',
+                                                 list(romeo.mbc.bodyPosW)[romeo.bodyIndexByName('HeadRoll_link')].rotation(), 1., 1.)
 
   comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
                                5., 10000.)
@@ -118,6 +122,7 @@ if __name__ == '__main__':
 
   # add tasks to the solver
   #qpsolver.solver.addTask(torsoOriTaskSp)
+  qpsolver.solver.addTask(headOriTaskSp)
   qpsolver.solver.addTask(comTaskSp)
   qpsolver.solver.addTask(postureTask1)
 
@@ -144,10 +149,14 @@ if __name__ == '__main__':
       self.target_pose = sva.PTransformd(Vector3d(0,0,1))
       # Status tracker
       self.status_tracker = 0;
+      # Tranformation from left eye to right eye 
+      self.X_re_le = sva.PTransformd(Vector3d(0,0,1));
 
       # gaze task to be created later
-      self.gazeTask = []
-      self.gazeTaskSp = []
+      self.gazeTaskLeft = []
+      self.gazeTaskLeftSp = []
+      self.gazeTaskRight = []
+      self.gazeTaskRightSp = []
 
       # sequence of states - each must correspond to a method of this object
       self.fsm_sequence  = ['wait_init_position',
@@ -172,17 +181,28 @@ if __name__ == '__main__':
     def init_gaze_task(self, rs):
       try:
         (trans, quat) = tfListener.lookupTransform('/0/LEye', '0/CameraLeftEye_optical_frame', rospy.Time(0))
-        X_b_gaze = transform.fromTf(trans, quat)
+        X_b_lgaze = transform.fromTf(trans, quat)
 
-        #X_gaze_object = self.fake_vision('/object/base_link')
-        self.gazeTask = tasks.qp.GazeTask(robots.mbs, romeo_index,
+        #Left eye controller task
+        self.gazeTaskLeft = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('LEye'),
-                                        self.target_pose.translation(), X_b_gaze)
-        self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 10., 50.)
-        qpsolver.solver.addTask(self.gazeTaskSp)
+                                        self.target_pose.translation(), X_b_lgaze)
+        self.gazeTaskLeftSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskLeft, 15., 90.)
+        qpsolver.solver.addTask(self.gazeTaskLeftSp)
+
+        # Add task for right eye
+        (transl, quatl) = tfListener.lookupTransform('/0/REye', '0/CameraRightEye_optical_frame', rospy.Time(0))
+        X_b_rgaze = transform.fromTf(transl, quatl)
+
+        #Right eye controller task
+        self.gazeTaskRight = tasks.qp.GazeTask(robots.mbs, romeo_index,
+                                        robots.robots[romeo_index].bodyIdByName('REye'),
+                                        self.target_pose.translation(), X_b_rgaze)
+        self.gazeTaskRightSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskRight, 15., 60.)
+        qpsolver.solver.addTask(self.gazeTaskRightSp)
 
         # for plotting task error
-        self.task_error_pub = TaskErrorPub(self.gazeTask, 'gaze_IBVS_task')
+        self.task_error_pub = TaskErrorPub(self.gazeTaskLeft, 'gaze_IBVS_task')
 
         print 'gaze task added'
         self.checkSequence()
@@ -191,10 +211,16 @@ if __name__ == '__main__':
 
     def interactive_gaze(self, rs):
       if (self.status_tracker == 1):
-        self.gazeTask.error(self.target_pose.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
+        self.gazeTaskLeft.error(self.target_pose.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
+        #Transformation from left to right eye
+        (trans_eye, quat_eye) = tfListener.lookupTransform('0/CameraLeftEye_optical_frame', '0/CameraRightEye_optical_frame', rospy.Time(0))
+        self.X_re_le = transform.fromTf(trans_eye, quat_eye)
+        target_pose_r = self.target_pose * self.X_re_le.inv()
+        self.gazeTaskRight.error(target_pose_r.translation(), Vector2d(0.0, 0.0)) 
       else:
-        self.gazeTask.error(Vector2d(0.0, 0.0), Vector2d(0.0, 0.0)) #Stop the robot: the object is not detected
-      #print 'eval: ', self.gazeTask.eval()
+        self.gazeTaskLeft.error(Vector2d(0.0, 0.0), Vector2d(0.0, 0.0)) #Stop the robot: the object is not detected
+        self.gazeTaskRight.error(Vector2d(0.0, 0.0), Vector2d(0.0, 0.0)) 
+      #print 'eval: ', self.gazeTaskLeft.eval()
 
     # main control loop
     def run(self, rs):
