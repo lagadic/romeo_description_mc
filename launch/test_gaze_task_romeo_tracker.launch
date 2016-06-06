@@ -7,6 +7,9 @@
   <!-- object behavior argument (interactive or pre-programmed) -->
   <arg name="interactive_mode" default="true" />
 
+  <!-- Choose between visp_auto_tracker or whycon -->
+  <arg name="tracker_type" default="visp_auto_tracker" />
+
   <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
   <param name="r2_description" command="cat $(find mc_env_description)/urdf/ground.urdf" />
   <param name="robot/robot_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
@@ -25,9 +28,11 @@
 
     <node name="mr_qp_state_publisher" pkg="mc_visualization" type="mr_qp_state_publisher.py" />
     <rosparam param="source_list">[[0,'/robot/controls/joint_states']]</rosparam>
-    <node name="test_gaze_task_romeo" pkg="romeo_mc" type="test_gaze_task_romeo_tracker.py" output="screen">
+
+    <node name="test_gaze_task_romeo" pkg="romeo_mc" type="test_gaze_task_romeo_tracker.py" args="$(arg tracker_type)" output="screen">
       <remap from="qp_joint_states" to="/robot/controls/joint_states" />
     </node>
+
     <node name="mr_contact_force_publisher" pkg="mc_visualization" type="mr_contact_force_visualization.py"/>
 
     <!-- Use simulated ticker -->

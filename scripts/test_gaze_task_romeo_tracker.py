@@ -7,12 +7,14 @@ import rbdyn as rbd
 import tasks
 from mc_rbdyn import loadRobots, rbdList, MRContact
 from mc_solver import MRQPSolver, DynamicsConstraint, ContactConstraint, \
-  KinematicsConstraint, CollisionsConstraint
+  KinematicsConstraint, CollisionsConstraint, Collision
 from joint_state_publisher import JointStatePublisher
 from mc_robot_msgs.msg import MCRobotState
 from ask_user import ask_user
-from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Int8
+from geometry_msgs.msg import PoseStamped, PoseArray
+from std_msgs.msg import Int8, Bool
+
+import sys
 
 import tf
 from mc_ros_utils import transform
@@ -33,6 +35,15 @@ timeStep = 0.005
 
 if __name__ == '__main__':
   rospy.init_node('test_gaze_task_tracker')
+  tracker_type = sys.argv[1]
+  print 'Tracker used is ', tracker_type
+  if tracker_type not in ['visp_auto_tracker','whycon']:
+    rospy.logwarn('Invalid tracker, defaulting to visp_auto_tracker\
+      \nusage: test_gaze_task_tracker.py tracker_type\
+      \nwhere tracker_type can be: \
+      \n visp_auto_tracker \
+      \n whycon ')
+
 
   # load the robot and the environment
   robots = loadRobots()
@@ -74,6 +85,24 @@ if __name__ == '__main__':
   qpsolver.addConstraintSet(contactConstraint)
   qpsolver.addConstraintSet(dynamicsConstraint1)
 
+  # Self-collision robot
+  cols = []
+  cols += [Collision('torso', 'HeadRoll_link', 0.06, 0.017, 0.),# 0.1, 0.02, 0.
+           Collision('l_wrist', 'torso', 0.05, 0.01, 0.), 
+           Collision('l_wrist', 'body', 0.05, 0.01, 0.),
+           Collision('l_wrist', 'LThigh', 0.05, 0.01, 0.),
+           Collision('r_wrist', 'torso', 0.05, 0.01, 0.),
+           Collision('r_wrist', 'body', 0.05, 0.01, 0.),
+           Collision('r_wrist', 'RThigh', 0.05, 0.01, 0.),
+          ]
+
+  r1SelfCollisionConstraint = CollisionsConstraint(robots, romeo_index,
+                                                   romeo_index, timeStep)
+  r1SelfCollisionConstraint.addCollisions(robots, cols)
+
+  qpsolver.addConstraintSet(r1SelfCollisionConstraint)
+
+
   # Setting up tasks for balance and posture
   postureTask1 = tasks.qp.PostureTask(robots.mbs, romeo_index,
                                       romeo_q, 0.1, 10.)
@@ -88,7 +117,7 @@ if __name__ == '__main__':
   comTaskSp.dimWeight(toEigenX(com_axis_weight))
 
   # add tasks to the solver
-  qpsolver.solver.addTask(torsoOriTaskSp)
+  #qpsolver.solver.addTask(torsoOriTaskSp)
   qpsolver.solver.addTask(comTaskSp)
   qpsolver.solver.addTask(postureTask1)
 
@@ -161,10 +190,10 @@ if __name__ == '__main__':
         print 'tf exception'
 
     def interactive_gaze(self, rs):
-      if (self.status_tracker == 3):
+      if (self.status_tracker == 1):
         self.gazeTask.error(self.target_pose.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
       else:
-        self.gazeTask.error(Vector2d(0.0, 0.0), Vector2d(0.0, 0.0)) #center the object in the image frame
+        self.gazeTask.error(Vector2d(0.0, 0.0), Vector2d(0.0, 0.0)) #Stop the robot: the object is not detected
       #print 'eval: ', self.gazeTask.eval()
 
     # main control loop
@@ -200,7 +229,7 @@ if __name__ == '__main__':
         self.fsm = self.idle
         print 'idling'
 
-    def objectPoseCB(self, pose):
+    def objectVispAutoTrackerPoseCB(self, pose):
       self.target_pose = transform.fromPose(pose.pose)
       #print self.target_pose.translation()
       [tf_tran,tf_quat] = transform.toTf(self.target_pose)
@@ -210,9 +239,28 @@ if __name__ == '__main__':
                         "/target",
                         "0/CameraLeftEye_optical_frame")
 
-    def statusTrackerCB(self, status):
-      self.status_tracker = status.data
+    def statusVispAutoTrackerCB(self, status):
+      if (status.data == 3):
+        self.status_tracker = 1
+      else:
+        self.status_tracker = 0
 
+    def objectWhyconPoseCB(self, poseArray):
+      pose = poseArray.poses[0]
+      self.target_pose = transform.fromPose(pose)
+      #print self.target_pose.translation()
+      [tf_tran,tf_quat] = transform.toTf(self.target_pose)
+      tfWriter.sendTransform(tf_tran,
+                        tf_quat,
+                        rospy.Time.now(),
+                        "/target",
+                        "0/CameraLeftEye_optical_frame")
+
+    def statusWhyconCB(self, status):
+      if (status.data == True):
+        self.status_tracker = 1
+      else:
+        self.status_tracker = 0
 
     def idle(self, rs):
       pass
@@ -221,9 +269,15 @@ if __name__ == '__main__':
   controller = Controller()
   rospy.Subscriber('/robot/sensors/robot_state', MCRobotState,
                    controller.run, queue_size=10, tcp_nodelay=True)
-  rospy.Subscriber('/visp_auto_tracker/object_position', PoseStamped,
-                   controller.objectPoseCB, queue_size=10, tcp_nodelay=True)
-  rospy.Subscriber('/visp_auto_tracker/status', Int8,
-                   controller.statusTrackerCB, queue_size=10, tcp_nodelay=True)
+  if (tracker_type == 'visp_auto_tracker'):
+    rospy.Subscriber('/visp_auto_tracker/object_position', PoseStamped,
+                     controller.objectVispAutoTrackerPoseCB, queue_size=10, tcp_nodelay=True)
+    rospy.Subscriber('/visp_auto_tracker/status', Int8,
+                     controller.statusVispAutoTrackerCB, queue_size=10, tcp_nodelay=True)
+  elif (tracker_type == 'whycon'):
+    rospy.Subscriber('/whycon/poses', PoseArray,
+                     controller.objectWhyconPoseCB, queue_size=10, tcp_nodelay=True)
+    rospy.Subscriber('/whycon/status', Bool,
+                     controller.statusWhyconCB, queue_size=10, tcp_nodelay=True)
 
   rospy.spin()
