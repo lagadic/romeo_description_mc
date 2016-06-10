@@ -21,8 +21,8 @@
  <!-- Demo mode:
                 test : PBVS hand using the desired pose of the hand published by visp_blob_tracker
                 box_grasping : PBVS hand using MBT to grasp an object-->
+  <!-- <arg name="mode" default="box_grasping" /> -->
   <arg name="mode" default="box_grasping" />
-
 
   <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
   <param name="r2_description" command="cat $(find mc_env_description)/urdf/ground.urdf" />
