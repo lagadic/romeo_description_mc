@@ -21,6 +21,8 @@ from mc_ros_utils import transform
 import sys
 import copy
 
+from naoqi import ALProxy
+
 # private helper scripts within the package
 from helper_scripts.tasks_helper import orientationTask, \
   comTask, positionTask, pbvsTask
@@ -173,7 +175,7 @@ if __name__ == '__main__':
   rhOriTask, rhOriTaskSp = orientationTask(robots, romeo_index, 'r_wrist', hand_rotation_goal,
                                            2., 100.)
   torsoOriTask, torsoOriTaskSp = orientationTask(robots, romeo_index, 'torso',
-                                                 Matrix3d.Identity(), 10., 10.)
+                                                 Matrix3d.Identity(), 2., 15.)
   headOriTask, headOriTaskSp = orientationTask(robots, romeo_index, 'HeadRoll_link',
                                                  list(romeo.mbc.bodyPosW)[romeo.bodyIndexByName('HeadRoll_link')].rotation(), 10., 10.)
   # comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
@@ -190,20 +192,32 @@ if __name__ == '__main__':
   offset_X_b_s = transform.fromTf(trans, quat)
   rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
                                      sva.PTransformd.Identity(),
-                                     2., 3000., offset_X_b_s) # 1000
+                                     1.5, 2500., offset_X_b_s) # 1000
   # rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
   #                                    sva.PTransformd.Identity(),
   #                                    5., 1000.)
 
   rhPosTask, rhPosTaskSp = positionTask(robots, romeo_index, 'r_wrist',
                                         rh_pos_goal,
-                                        2., 1000., rHand.X_b_s.translation())
-  lhPosTask, lhPosTaskSp = positionTask(robots, romeo_index, 'l_wrist',
-                                      lh_pos_goal,
-                                      2., 1000., lHand.X_b_s.translation() )
+                                        1.5, 1000., rHand.X_b_s.translation())
 
-  lhOriTask, lhOriTaskSp = orientationTask(robots, romeo_index, 'l_wrist', lh_ori_goal,
-                                           2., 100.)
+  # Task for left arm: mantain pose and orientation
+  # lhPosTask, lhPosTaskSp = positionTask(robots, romeo_index, 'l_wrist',
+  #                                     lh_pos_goal,
+  #                                     2., 1000., lHand.X_b_s.translation() )
+
+  # lhOriTask, lhOriTaskSp = orientationTask(robots, romeo_index, 'l_wrist', lh_ori_goal,
+  #                                          2., 100.)
+
+  # A posture task for the left arm to lessen its flailing
+  postureTaskLeftArm = tasks.qp.PostureTask(robots.mbs, romeo_index, romeo_q, 0.0, 10.)
+  jointStiffness = []
+  for j in romeo.mb.joints():
+    if j.name() in [  'LShoulderPitch', 'LShoulderYaw', 'LElbowRoll', 'LElbowYaw', 'LWristRoll', 'LWristYaw', 'LWristPitch']:
+      jointStiffness.append(tasks.qp.JointStiffness(j.id(), 2.))
+  postureTaskLeftArm.jointsStiffness(robots.mbs, jointStiffness)
+
+
   task_error_to_pub = rhPbvsTask
 
 
@@ -215,8 +229,9 @@ if __name__ == '__main__':
   qpsolver.solver.addTask(rhPosTaskSp)
   qpsolver.solver.addTask(rhOriTaskSp)
 
-  qpsolver.solver.addTask(lhPosTaskSp) 
-  qpsolver.solver.addTask(lhOriTaskSp)
+  # qpsolver.solver.addTask(lhPosTaskSp) 
+  # qpsolver.solver.addTask(lhOriTaskSp)
+  qpsolver.solver.addTask(postureTaskLeftArm) #TODO: add in only in the right places
 
 
   qpsolver.solver.addTask(torsoOriTaskSp)
@@ -323,20 +338,6 @@ if __name__ == '__main__':
         if (mode == 'test' or mode == 'box_grasping' and self.status_tracker_box != 1):
           rhPbvsTask.error(self.target_pose_hand * self.target_des_pose_hand.inv()) # (X_c_h * X_c_dh.inv())
         elif (self.status_tracker_box == 1 and mode == 'box_grasping'):
-          # print "X_c_box: "
-          # print  self.X_c_box.translation()
-          # print "---------------"
-          # print "offset_X_box_hd: " 
-          # print self.offset_X_box_hd.translation()
-          # print "---------------"
-          # print "---------------------------------------------------"
-          # print "Real error: "
-          # error_ = self.target_pose_hand * self.X_c_box.inv() * self.offset_X_box_hd.inv()
-          # print  "Translation:"
-          # print error_.translation()
-          # print  "Rotation:"
-          # print error_.rotation()        
-          # print "---------------------------------------------------"
           rhPbvsTask.error(self.target_pose_hand * self.X_c_box.inv() * self.offset_X_box_hd.inv() ) # (X_c_h * X_c_dh.inv())
           # rhPbvsTask.error(self.target_pose_hand * self.target_pose_hand.inv() )          
       else:
@@ -363,12 +364,12 @@ if __name__ == '__main__':
 
 
       if (self.status_tracker_hand == 1):
-        # if (self.status_tracker_box ==1):
-        #   self.gazeTask.error((self.target_pose_hand.translation() + self.X_c_box.translation())/2, Vector2d(0.2, 0.0)) #center the object in the image frame
-        # else:
-        self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.1, 0.03)) #center the object in the image frame
+        if (self.status_tracker_box ==1):
+          self.gazeTask.error((self.target_pose_hand.translation() + self.X_c_box.translation())/2, Vector2d(0.0, -0.02)) #center the object in the image frame
+        else:
+          self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.1, -0.03)) #center the object in the image frame
       else:
-        self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.2, 0.05)) 
+        self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.2, 0.07)) 
       #print 'eval: ', self.gazeTask.eval()
 
     # main control loop
@@ -378,6 +379,18 @@ if __name__ == '__main__':
         self.stopCB = None
         self.isRunning = True
         self.hsCB = stopMotion(robots, qpsolver, postureTask1, None, rbdList(romeo.mbc.q))
+        try:
+          PORT = 9559
+          robotIP = "198.18.0.1"
+          motionProxy = ALProxy("ALMotion", robotIP, PORT)
+        except Exception,e:
+          print "Could not create proxy to ALMotion"
+          print "Error was: ",e
+          sys.exit(1)
+
+        # Example showing how to close the right hand.
+        handName  = 'RHand'
+        motionProxy.closeHand(handName)
         self.fsm = self.waitHS
 
       if self.isRunning:
