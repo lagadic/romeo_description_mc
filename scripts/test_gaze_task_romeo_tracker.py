@@ -187,7 +187,7 @@ if __name__ == '__main__':
         self.gazeTaskLeft = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('LEye'),
                                         self.target_pose.translation(), X_b_lgaze)
-        self.gazeTaskLeftSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskLeft, 15., 90.)
+        self.gazeTaskLeftSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskLeft, 7., 80.)
         qpsolver.solver.addTask(self.gazeTaskLeftSp)
 
         # Add task for right eye
@@ -198,7 +198,7 @@ if __name__ == '__main__':
         self.gazeTaskRight = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('REye'),
                                         self.target_pose.translation(), X_b_rgaze)
-        self.gazeTaskRightSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskRight, 15., 60.)
+        self.gazeTaskRightSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskRight, 7., 40.)
         qpsolver.solver.addTask(self.gazeTaskRightSp)
 
         # for plotting task error

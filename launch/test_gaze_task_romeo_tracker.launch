@@ -8,7 +8,7 @@
   <arg name="interactive_mode" default="true" />
 
   <!-- Choose between visp_auto_tracker or whycon -->
-  <arg name="tracker_type" default="visp_auto_tracker" />
+  <arg name="tracker_type" default="whycon" />
 
   <param name="r1_description" command="cat $(find romeo_description_mc)/urdf/romeo.urdf" />
   <param name="r2_description" command="cat $(find mc_env_description)/urdf/ground.urdf" />
