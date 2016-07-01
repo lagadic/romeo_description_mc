@@ -2,6 +2,7 @@ import rospy
 import spacevecalg as sva
 import tf
 from mc_ros_utils import transform
+from eigen3 import Vector3d
 
 class fakeVision(object):
   '''
@@ -24,5 +25,7 @@ class fakeVision(object):
       X_gaze_target = transform.fromTf(trans, quat)
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
       print 'tf exception'
-      X_gaze_target = sva.PTransformd.Identity() #TODO: better fallback
+      #TODO: better fallback
+      # a 1 on the Z component prevents a singularity issue with the IBVS Jacobian
+      X_gaze_target = sva.PTransformd(Vector3d(0., 0., 1.)) 
     return X_gaze_target
