@@ -22,6 +22,8 @@ import sys
 import copy
 
 from naoqi import ALProxy
+import time
+
 
 # private helper scripts within the package
 from helper_scripts.tasks_helper import orientationTask, \
@@ -222,8 +224,8 @@ if __name__ == '__main__':
 
 
   # disable the CoM height
-  # com_axis_weight = np.mat([1., 1., 0.]).T
-  # comTaskSp.dimWeight(toEigenX(com_axis_weight))
+   com_axis_weight = np.mat([1., 1., 0.1]).T
+   comTaskSp.dimWeight(toEigenX(com_axis_weight))
 
   # add tasks to the solver
   qpsolver.solver.addTask(rhPosTaskSp)
@@ -252,6 +254,7 @@ if __name__ == '__main__':
     def __init__(self):
       self.isRunning = True
       self.stopCB = ask_user.askUserNonBlock('stop_control', 'Stop')
+      self.graspCB = ask_user.askUserNonBlock('grasp', 'Grasp')
 
       # initialize fake Vision
       self.X_gaze_hand = sva.PTransformd(Vector3d.Zero()) #TODO: better init
@@ -281,6 +284,8 @@ if __name__ == '__main__':
       trans = (-0.07765, 0.126563, 0.002561) 
       quat = (-0.67277591331, 0.687752570778, 0.0465059942478, -0.268712047286)
       self.offset_X_box_hd = transform.fromTf(trans, quat)
+      trans_grasp = (-0.03765, 0.126563, 0.002561) 
+      self.offset_X_box_hd_grasp = transform.fromTf(trans_grasp, quat) 
 
       # sequence of states - each must correspond to a method of this object
       self.fsm_sequence  = ['wait_init_position',
@@ -374,6 +379,12 @@ if __name__ == '__main__':
 
     # main control loop
     def run(self, rs):
+      if self.graspCB is not None and self.graspCB.check():
+        print 'grasping pose'
+        self.graspCB = None
+        self.isRunning = True
+        self.offset_X_box_hd = self.offset_X_box_hd_grasp 
+
       if self.stopCB is not None and self.stopCB.check():
         print 'stopping'
         self.stopCB = None
@@ -390,7 +401,35 @@ if __name__ == '__main__':
 
         # Example showing how to close the right hand.
         handName  = 'RHand'
-        motionProxy.closeHand(handName)
+        #motionProxy.closeHand(handName)
+        motionProxy.setStiffnesses(handName, 1.0)
+        angle  = 0.10
+        fractionMaxSpeed  = 0.2
+        motionProxy.setAngles(handName, angle, fractionMaxSpeed)
+        time.sleep(1.0)
+        chainName = "RArm"
+        frame     = 0 # TORSO
+        useSensor = True
+
+        # Get the current position of the chainName in the same frame
+        current = motionProxy.getPosition(chainName, frame, useSensor)
+
+        target = [
+            current[0] + 0.00,
+            current[1] + 0.00,
+            current[2] + 0.09,
+            current[3] + 0.0,
+            current[4] + 0.0,
+            current[5] + 0.0]
+
+        fractionMaxSpeed = 0.3
+        axisMask         = 7 # just control position
+
+        motionProxy.setPositions(chainName, frame, target, fractionMaxSpeed, axisMask)
+
+        time.sleep(1.0)
+
+
         self.fsm = self.waitHS
 
       if self.isRunning:
