@@ -86,7 +86,7 @@ if __name__ == '__main__':
   comTaskSp.dimWeight(toEigenX(com_axis_weight))
 
   # add tasks to the solver
-  qpsolver.solver.addTask(torsoOriTaskSp)
+  #qpsolver.solver.addTask(torsoOriTaskSp)
   qpsolver.solver.addTask(comTaskSp)
   qpsolver.solver.addTask(postureTask1)
 
@@ -142,8 +142,11 @@ if __name__ == '__main__':
         self.gazeTask = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('LEye'),
                                         X_gaze_object.translation(), X_b_gaze)
-        self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 10., 50.)
-        qpsolver.solver.addTask(self.gazeTaskSp)
+        #self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 10., 80.) #  10., 50.
+        gaze_task_gain = 15. # 10.
+        damping_factor = 2.7 # 3. must be greater than 1
+        self.gazeTaskTr = tasks.qp.TrajectoryTask(robots.mbs, romeo_index, self.gazeTask, gaze_task_gain, damping_factor*2*np.sqrt(gaze_task_gain), 80.) #  10., 50.
+        qpsolver.solver.addTask(self.gazeTaskTr)
 
         # for plotting task error
         self.task_error_pub = TaskErrorPub(self.gazeTask, 'gaze_IBVS_task')
@@ -156,7 +159,7 @@ if __name__ == '__main__':
     def interactive_gaze(self, rs):
       X_gaze_object =self.fake_vision('/object/base_link')
       self.gazeTask.error(X_gaze_object.translation(), Vector2d(0.0, 0.0)) #center the object in the image frame
-#      print 'eval: ', self.gazeTask.eval()
+      #print 'eval: ', self.gazeTask.eval()
 
     # main control loop
     def run(self, rs):

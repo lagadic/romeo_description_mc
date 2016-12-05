@@ -154,9 +154,9 @@ if __name__ == '__main__':
 
       # gaze task to be created later
       self.gazeTaskLeft = []
-      self.gazeTaskLeftSp = []
+      self.gazeTaskLeftTr = []
       self.gazeTaskRight = []
-      self.gazeTaskRightSp = []
+      self.gazeTaskRightTr = []
 
       # sequence of states - each must correspond to a method of this object
       self.fsm_sequence  = ['wait_init_position',
@@ -187,8 +187,12 @@ if __name__ == '__main__':
         self.gazeTaskLeft = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('LEye'),
                                         self.target_pose.translation(), X_b_lgaze)
-        self.gazeTaskLeftSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskLeft, 7., 80.)
-        qpsolver.solver.addTask(self.gazeTaskLeftSp)
+        #self.gazeTaskLeftSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskLeft, 7., 80.)
+        gaze_task_gain = 25. # 18
+        damping_factor = 2.3 # must be greater than 1
+        self.gazeTaskLeftTr = tasks.qp.TrajectoryTask(robots.mbs, romeo_index, self.gazeTaskLeft, gaze_task_gain, damping_factor*2*np.sqrt(gaze_task_gain), 80.) #  10., 50.
+
+        qpsolver.solver.addTask(self.gazeTaskLeftTr)
 
         # Add task for right eye
         (transl, quatl) = tfListener.lookupTransform('/0/REye', '0/CameraRightEye_optical_frame', rospy.Time(0))
@@ -198,8 +202,9 @@ if __name__ == '__main__':
         self.gazeTaskRight = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('REye'),
                                         self.target_pose.translation(), X_b_rgaze)
-        self.gazeTaskRightSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskRight, 7., 40.)
-        qpsolver.solver.addTask(self.gazeTaskRightSp)
+        #self.gazeTaskRightSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTaskRight, 7., 40.)
+        self.gazeTaskRigthtTr = tasks.qp.TrajectoryTask(robots.mbs, romeo_index, self.gazeTaskRight, gaze_task_gain-5, damping_factor*2*np.sqrt(gaze_task_gain), 30.) #  10., 50.
+        qpsolver.solver.addTask(self.gazeTaskRigthtTr)
 
         # for plotting task error
         self.task_error_pub = TaskErrorPub(self.gazeTaskLeft, 'gaze_IBVS_task')
