@@ -166,7 +166,7 @@ if __name__ == '__main__':
   #lHand.X_0_s(romeo).rotation() #sva.RotY(-np.pi/2.)
 
   # Setting up the tasks
-  postureTask1 = tasks.qp.PostureTask(robots.mbs, romeo_index, romeo_q, 0.1, 10.)
+  postureTask1 = tasks.qp.PostureTask(robots.mbs, romeo_index, romeo_q, 0.1, 10.) #0.1,  15.
 
   # rfPosTask, rfPosTaskSp = positionTask(robots, romeo_index, 'r_ankle',
   #                                       rf_pos_goal,
@@ -177,7 +177,7 @@ if __name__ == '__main__':
   rhOriTask, rhOriTaskSp = orientationTask(robots, romeo_index, 'r_wrist', hand_rotation_goal,
                                            2., 100.)
   torsoOriTask, torsoOriTaskSp = orientationTask(robots, romeo_index, 'torso',
-                                                 Matrix3d.Identity(), 2., 15.)
+                                                 Matrix3d.Identity(), 1., 15.)  #2., 15.
   headOriTask, headOriTaskSp = orientationTask(robots, romeo_index, 'HeadRoll_link',
                                                  list(romeo.mbc.bodyPosW)[romeo.bodyIndexByName('HeadRoll_link')].rotation(), 10., 10.)
   # comTask, comTaskSp = comTask(robots, romeo_index, rbd.computeCoM(romeo.mb, romeo.mbc),
@@ -192,6 +192,7 @@ if __name__ == '__main__':
   trans = (0.033096434903, 0.0486815138012, 0.0318448350088)
   quat = (0.577328318474, 0.0275670521388, 0.110292994864, 0.80855891907)
   offset_X_b_s = transform.fromTf(trans, quat)
+
   rhPbvsTask, rhPbvsTaskSp = pbvsTask(robots, romeo_index, 'r_wrist',
                                      sva.PTransformd.Identity(),
                                      1.5, 2500., offset_X_b_s) # 1000
@@ -219,13 +220,12 @@ if __name__ == '__main__':
       jointStiffness.append(tasks.qp.JointStiffness(j.id(), 2.))
   postureTaskLeftArm.jointsStiffness(robots.mbs, jointStiffness)
 
-
   task_error_to_pub = rhPbvsTask
 
-
   # disable the CoM height
-   com_axis_weight = np.mat([1., 1., 0.1]).T
-   comTaskSp.dimWeight(toEigenX(com_axis_weight))
+  #com_axis_weight = np.mat([1., 1., 1e-3]).T
+  com_axis_weight = np.mat([1., 1., 1e-4]).T
+  comTaskSp.dimWeight(toEigenX(com_axis_weight))
 
   # add tasks to the solver
   qpsolver.solver.addTask(rhPosTaskSp)
@@ -287,6 +287,12 @@ if __name__ == '__main__':
       trans_grasp = (-0.03765, 0.126563, 0.002561) 
       self.offset_X_box_hd_grasp = transform.fromTf(trans_grasp, quat) 
 
+      # gaze task to be created later
+      self.gazeTaskLeft = []
+      self.gazeTaskLeftTr = []
+      self.gazeTaskRight = []
+      self.gazeTaskRightTr = []
+
       # sequence of states - each must correspond to a method of this object
       self.fsm_sequence  = ['wait_init_position',
                             'init_gaze_task',
@@ -319,14 +325,31 @@ if __name__ == '__main__':
         X_b_gaze = transform.fromTf(trans, quat)
 
         #target_pose_hand = self.fake_vision(self.hand_frame)
-        self.gazeTask = tasks.qp.GazeTask(robots.mbs, romeo_index,
+        # self.gazeTask = tasks.qp.GazeTask(robots.mbs, romeo_index,
+        #                                 robots.robots[romeo_index].bodyIdByName('LEye'),
+        #                                 self.target_pose_hand.translation(), X_b_gaze)
+        # self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 1., 50.)
+        #qpsolver.solver.addTask(self.gazeTaskSp)
+
+        self.gazeTaskLeft = tasks.qp.GazeTask(robots.mbs, romeo_index,
                                         robots.robots[romeo_index].bodyIdByName('LEye'),
                                         self.target_pose_hand.translation(), X_b_gaze)
-        self.gazeTaskSp = tasks.qp.SetPointTask(robots.mbs, romeo_index, self.gazeTask, 1., 50.)
-        qpsolver.solver.addTask(self.gazeTaskSp)
+        gaze_task_gain = 4.
+        damping_factor = 2.0 # must be greater than 1
+        self.gazeTaskLeftTr = tasks.qp.TrajectoryTask(robots.mbs, romeo_index, self.gazeTaskLeft, gaze_task_gain, damping_factor*2*np.sqrt(gaze_task_gain), 60.) #  10., 50.
+        qpsolver.solver.addTask(self.gazeTaskLeftTr)
+
+        # Task for right eye
+        # (transl, quatl) = tfListener.lookupTransform('/0/REye', '0/CameraRightEye_optical_frame', rospy.Time(0))
+        # X_b_rgaze = transform.fromTf(transl, quatl)
+        # self.gazeTaskRight = tasks.qp.GazeTask(robots.mbs, romeo_index,
+        #                                 robots.robots[romeo_index].bodyIdByName('REye'),
+        #                                 self.target_pose.translation(), X_b_rgaze)
+        # self.gazeTaskRigthtTr = tasks.qp.TrajectoryTask(robots.mbs, romeo_index, self.gazeTaskRight, gaze_task_gain-5, damping_factor*2*np.sqrt(gaze_task_gain), 30.) #  10., 50.
+        # qpsolver.solver.addTask(self.gazeTaskRigthtTr)
 
         # for plotting task error
-        self.task_error_pub = TaskErrorPub(self.gazeTask, 'gaze_IBVS_task')
+        self.task_error_pub_gaze = TaskErrorPub(self.gazeTaskLeft, 'gaze_IBVS_task')
 
         print 'gaze task added'
         self.checkSequence()
@@ -370,11 +393,12 @@ if __name__ == '__main__':
 
       if (self.status_tracker_hand == 1):
         if (self.status_tracker_box ==1):
-          self.gazeTask.error((self.target_pose_hand.translation() + self.X_c_box.translation())/2, Vector2d(0.0, -0.02)) #center the object in the image frame
+          self.gazeTaskLeft.error((self.target_pose_hand.translation() + self.X_c_box.translation())/2, Vector2d(0.0, -0.02)) #center the object in the image frame
         else:
-          self.gazeTask.error(self.target_pose_hand.translation(), Vector2d(0.1, -0.03)) #center the object in the image frame
+          #self.gazeTaskLeft.error(self.target_pose_hand.translation(), Vector2d(0.1, 0.1)) #center the object in the image frame Vector2d(0.1, -0.03)
+          self.gazeTaskLeft.error(self.X_gaze_object.translation(), Vector2d(0.2, 0.0)) # Vector2d(0.2, 0.07))
       else:
-        self.gazeTask.error(self.X_gaze_object.translation(), Vector2d(0.2, 0.07)) 
+        self.gazeTaskLeft.error(self.X_gaze_object.translation(), Vector2d(0.2, 0.0)) # Vector2d(0.2, 0.07))
       #print 'eval: ', self.gazeTask.eval()
 
     # main control loop
@@ -399,7 +423,7 @@ if __name__ == '__main__':
           print "Error was: ",e
           sys.exit(1)
 
-        # Example showing how to close the right hand.
+        # Close the hand 
         handName  = 'RHand'
         #motionProxy.closeHand(handName)
         motionProxy.setStiffnesses(handName, 1.0)
@@ -407,10 +431,11 @@ if __name__ == '__main__':
         fractionMaxSpeed  = 0.2
         motionProxy.setAngles(handName, angle, fractionMaxSpeed)
         time.sleep(1.0)
+
+        # Motion to raise the box
         chainName = "RArm"
         frame     = 0 # TORSO
         useSensor = True
-
         # Get the current position of the chainName in the same frame
         current = motionProxy.getPosition(chainName, frame, useSensor)
 
@@ -424,11 +449,8 @@ if __name__ == '__main__':
 
         fractionMaxSpeed = 0.3
         axisMask         = 7 # just control position
-
         motionProxy.setPositions(chainName, frame, target, fractionMaxSpeed, axisMask)
-
         time.sleep(1.0)
-
 
         self.fsm = self.waitHS
 
@@ -442,6 +464,9 @@ if __name__ == '__main__':
         romeoJsp.publish(curTime)
         #romeo_real_Jsp.publish(curTime)
         self.task_error_pub.publish()
+        if self.fsm == self.visual_servo_grasp:
+          self.task_error_pub_gaze.publish()
+
         qpsolver.send(curTime)
 
         self.fsm(rs)
