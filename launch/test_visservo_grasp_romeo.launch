@@ -54,10 +54,16 @@
   </include>
 
   <!-- object-->
-  <group ns="object" if="$(arg interactive_mode)">
+<!--   <group ns="object" if="$(arg interactive_mode)">
     <param name="tf_prefix" value="object"/>
     <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.3 -0.2 1.0 0. 0. 0. small_box.urdf 200"/>
+  </group> -->
+
+  <group ns="object" if="$(arg interactive_mode)">
+    <param name="tf_prefix" value="object"/>
+    <node name="movable_object" pkg="romeo_mc" type="movable_object.py" args="0.24644 -0.22262 0.86438 1.57 0. 0. small_box.urdf 200"/>
   </group>
+
   <group ns="object" unless="$(arg interactive_mode)">
     <param name="tf_prefix" value="object"/>
     <node name="moving_object" pkg="romeo_mc" type="moving_object.py" args="0.3 -0.25 1.0 0. 0. 0. small_box.urdf 200 wave"/>
