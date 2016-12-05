@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /gaze frame1
+        - /object2
       Splitter Ratio: 0.649171
     Tree Height: 895
   - Class: rviz/Selection
@@ -25,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Camera
 Visualization Manager:
   Class: ""
   Displays:
@@ -610,6 +611,7 @@ Visualization Manager:
       Overlay Alpha: 0
       Queue Size: 2
       Transport Hint: raw
+      Unreliable: false
       Value: true
       Visibility:
         Grid: true
@@ -647,12 +649,12 @@ Visualization Manager:
       Reference Frame: 0/CameraLeftEye_optical_frame
       Value: true
     - Class: rviz/Axes
-      Enabled: false
-      Length: 1
+      Enabled: true
+      Length: 0.1
       Name: object
-      Radius: 0.1
-      Reference Frame: object/base_link
-      Value: false
+      Radius: 0.01
+      Reference Frame: target
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -677,7 +679,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.33124
+      Distance: 1.53288
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -689,10 +691,10 @@ Visualization Manager:
         Z: 1.15858
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.275398
+      Pitch: 0.685398
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.8104
+      Yaw: 0.1254
     Saved: ~
 Window Geometry:
   Camera:
@@ -712,5 +714,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1855
-  X: 55
-  Y: -14
+  X: 65
+  Y: 24
