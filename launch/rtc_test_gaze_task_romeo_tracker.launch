@@ -1,0 +1,36 @@
+<launch>
+  <arg name="model" value="$(find romeo_description_mc)/urdf/romeo.urdf"/>
+  <arg name="gui" default="True" />
+  <param name="robot_description" textfile="$(arg model)" />
+  <arg name="env_model" value="$(find mc_env_description)/urdf/ground.urdf"/>
+  <param name="env/robot_description" textfile="$(arg env_model)" />
+  <param name="env/tf_prefix" value="/env"/>
+  <node name="env_state_publisher" pkg="robot_state_publisher" type="state_publisher" ns="env"></node>
+
+  <!-- object behavior argument (interactive or pre-programmed) -->
+  <arg name="interactive_mode" default="true" />
+
+  <node name="map_to_env" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 /robot_map /env/base_link 1000" />
+
+  <group if="$(arg gui)">
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find romeo_mc)/rviz_config/rtc_test_gaze_task_romeo_tracker.rviz"/>
+  </group>
+
+  <param name="mc_rtc_ticker/conf" value="$(find romeo_mc)/etc/rtc_test_gaze_task_romeo_tracker.conf" />
+  <param name="mc_rtc_ticker/bench" value="false" />
+  <node name="mc_rtc_ticker" pkg="mc_rtc_ticker" type="mc_rtc_ticker" output="screen"/>
+  
+  <!-- object-->
+  <group ns="object" if="$(arg interactive_mode)">
+    <param name="tf_prefix" value="object"/>
+    <node name="rtc_movable_object" pkg="romeo_mc" type="rtc_movable_object.py" args="2.0 0.0 1.0 1.5708 0.0 0.0 small_box.urdf 200"/>
+  </group>
+  <group ns="object" unless="$(arg interactive_mode)">
+    <param name="tf_prefix" value="object"/>
+    <node name="rtc_moving_object" pkg="romeo_mc" type="rtc_moving_object.py" args="2.0 0.0 1.0 1.5708 0.0 0.0 small_box.urdf 200 two_target"/>
+  </group>
+
+  <!-- fake camera-->
+  <node name="rtc_fake_camera" pkg="romeo_mc" type="rtc_fake_camera.py" />
+  <node pkg="tf" type="static_transform_publisher" name="gaze_corrected_pub" args="0.1 0 0 -1.5708 0. -1.5708 /control/CameraLeftEye_optical_frame /control/gaze_corrected 100" />
+</launch>
