@@ -17,7 +17,7 @@ Romeo will try to keep in the center of the image the target, using a whole body
 * Start velocity controller:
 `$ roslaunch visp_naoqi_ros romeo_cmd_vel.launch`
 * Start gaze demos:
-`$ roslaunch romeo_mc test_gaze_task_romeo_tracker.launch tracker_type:=whycon`
+`$ roslaunch romeo_mc rtc_test_gaze_task_romeo_tracker.launch tracker_type:=whycon`
 
 ## Grasp box demo
 
